@@ -1,3 +1,8 @@
+# My Custom
+.project
+.pydevproject
+
+
 *.py[co]
 
 # Packages
