@@ -44,7 +44,7 @@ if __name__ == '__main__':
     '''
     if cfgSwitch: ###
         cfgStorageRoot = sys.argv[1]
-    print 'cfgStorageRoot: ' + str( cfgStorageRoot ) ### 
+    print '\n' + 'cfgStorageRoot: ' + str( cfgStorageRoot ) ### 
     print 'cfgSwitch: ' + str( cfgSwitch ) ###
     print "------------" ###
     
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     except:
         print "### Oops!: can't get listdir" ###
         # TODO: log exeption
-        raise ValueError
+        raise ValueError("Can't scan this folder: \n\t" + cfgStorageRoot)
     
     print 'len( varRawDirList ):\t' + str( len( varRawDirList )) + '\n' ###
     
