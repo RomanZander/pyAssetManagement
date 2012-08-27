@@ -53,7 +53,7 @@ if __name__ == '__main__':
         varRawDirList = os.listdir( cfgStorageRoot )
     except:
         print "### Oops!: can't get listdir" ###
-        # TODO: log exeption
+        # TODO: log exception
         raise ValueError("Can't scan this folder: \n\t" + cfgStorageRoot)
     
     print 'len( varRawDirList ):\t' + str( len( varRawDirList )) + '\n' ###
