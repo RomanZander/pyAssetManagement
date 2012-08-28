@@ -19,33 +19,25 @@
     ...
 '''
 import os
-
-###
+from stat import *
 import sys
-# import ConfigParser
 
-# cfgStorageRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
-cfgStorageRoot = "d:\\dev.Git\\pySequenceTester\\test4"
-cfgSwitch = ( len( sys.argv ) > 1) ###
 
+cfgStorageRoot = "c:\_GitHub\pySequenceTester\test4"
+# cfgStorageRoot = "d:\\dev.Git\\pySequenceTester\\test4"
+cfgFileMediaExt = ['mov', 'avi']
+cfgSeqenceMediaExt = ['dpx', 'tif']
 
 varRawDirList = []
 varRawDirListInfo = []
 varSubDirList = []
-varRawFileList = []
+varFileList = []
 
 if __name__ == '__main__':
-    '''
-    # configuration reading
-    config = ConfigParser.RawConfigParser(allow_no_value=True)
-    config.read('base.cfg')
-    cfgDevice = str( config.get( 'storage', 'device' ))
-    cfgPath = str( config.get( 'storage', 'path' ))
-    '''
-    if cfgSwitch: ###
-        cfgStorageRoot = sys.argv[1]
+
+    if  ( len( sys.argv ) > 1 ): ###
+        cfgStorageRoot = sys.argv[1] ###
     print '\n' + 'cfgStorageRoot: ' + str( cfgStorageRoot ) ### 
-    print 'cfgSwitch: ' + str( cfgSwitch ) ###
     print "------------" ###
     
     # read raw listing
@@ -64,17 +56,25 @@ if __name__ == '__main__':
         itemInfo = {}
         itemInfo['path'] = cfgStorageRoot
         itemInfo['name'] = item 
+        itemInfo['mode'] = itemStat.st_mode
         itemInfo['size'] = itemStat.st_size
+        itemInfo['mtime'] = itemStat.st_mtime
         varRawDirListInfo.append(itemInfo) 
         
     print 'len( varRawDirListInfo ):\t' + str( len( varRawDirListInfo )) + '\n' ###
-    print 'varRawDirListInfo[1]:\t' + str( varRawDirListInfo[1] ) + '\n' ###
+
+    # sort out collected results
+    for itemInfo in varRawDirListInfo:
+        if S_ISDIR( itemInfo['mode'] ):
+            varSubDirList.append( itemInfo )
+        elif S_ISREG( itemInfo['mode'] ):
+            varFileList.append( itemInfo )
+         
+    print '\nlen( varSubDirList ):\t' + str( len( varSubDirList )) ###
+    for item in varSubDirList:
+        print item 
+    print '\nlen( varFileList ):\t' + str( len( varFileList )) ###
+    for item in varFileList:
+        print item 
     
-    '''
-    for rootdir, dirs, files in os.walk( cfgStorageRoot ):
-        print rootdir
-        print dirs
-        print files
-        print '========'
-    ''' 
     pass
