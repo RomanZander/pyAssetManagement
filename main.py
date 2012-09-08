@@ -34,7 +34,7 @@ if len( sys.argv ) > 1: ###
 print '\ncfgStorageRoot:', cfgStorageRoot, '\n------------' ###
 
 
-# tuples with media file extentions 
+# tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi'
 cfgSeqenceMediaExt = '.dpx', '.tif', '.jpg'
 
@@ -101,6 +101,15 @@ def sortOutCollected( rawDirListInfo ):
     # returns tuple of folders / files lists
     return  ( subDirList, fileList )
 
+def isFileMedia( itemList ):
+    print '### isFileMedia(): ', itemList['name']
+    print itemList['name'].lower().endswith( cfgFileMediaExt )
+    if True:
+        return True
+    else:
+        return False
+    pass
+
 if __name__ == '__main__':
     # get raw directory list 
     varRawDirList = getRawDirList( cfgStorageRoot )
@@ -116,15 +125,13 @@ if __name__ == '__main__':
         # TODO make an agreement about arguments list
         sendMessageToQM('Subfolders found', varSubDirList )
         pass
+    # filter file-only-type media
+    varFileMedia = filter( isFileMedia, varFileList )
     
-    '''     
-    print '\nlen( varSubDirList ):\t' + str( len( varSubDirList )) ###
-    for item in varSubDirList:
+    ''' '''     
+    print '\n varFileMedia:\t' + str( len( varFileMedia )) ###
+    for item in varFileMedia:
         print item
         pass 
-    print '\nlen( varFileList ):\t' + str( len( varFileList )) ###
-    for item in varFileList:
-        print item
-        pass 
-    '''
+    ''' '''
     pass
