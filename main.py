@@ -9,6 +9,7 @@
 # ---------------------------------------------------------------------------------------------
 # TODO
 # ---------------------------------------------------------------------------------------------
+from win32verstamp import Var
 """
     raw list dir
     qMessage "folder is gone"
@@ -28,6 +29,10 @@ import re
 
 # cfgStorageRoot = "c:\_GitHub\pySequenceTester\test4"
 cfgStorageRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
+if len( sys.argv ) > 1: ### 
+    cfgStorageRoot = sys.argv[1] ###
+print '\ncfgStorageRoot:', cfgStorageRoot, '\n------------' ###
+
 
 # tuples with media file extentions 
 cfgFileMediaExt = '.mov', '.avi'
@@ -42,19 +47,23 @@ varRawDirListInfo = [] # list for folder's items info
 varSubDirList = [] # list for folder's subfolders
 varFileList = [] # list for folder's files
 
+# send message to MQ server
+def sendMessageToQM( label, content ):
+    # TODO make an agreement about message protocol
+    print '### send to MQ:', label, ':', type( content ), len( content ), ':\n', content ###
+    pass
+
 # let's read raw directory listing
 def getRawDirList( RootFolder ):
     try: 
         rawDirList = os.listdir( RootFolder )
     except:
         # TODO: log exception
-        # TODO: send exception message to MQ
-        print "### Oops!: folder is gone: \t", RootFolder ###
+        # send exception message to MQ
+        sendMessageToQM('Ooops! Folder is gone', RootFolder )
         return False
-        
     # TODO: log info listing
-    print '### OK: items in folder ', RootFolder, ' : ', len( rawDirList ) ###
-    
+    # print '### OK: items in folder ', RootFolder, ' : ', len( rawDirList ) ###
     return rawDirList
 
 def getRawDirListInfo( RootFolder, FolderListing ):
@@ -93,15 +102,6 @@ def sortOutCollected( rawDirListInfo ):
     return  ( subDirList, fileList )
 
 if __name__ == '__main__':
-    
-    
-    ### dev-only: select argument 
-    if  ( len( sys.argv ) > 1 ): ###
-        cfgStorageRoot = sys.argv[1] ###
-    print '\n' + 'cfgStorageRoot: ' + str( cfgStorageRoot ) ### 
-    print "------------" ###
-    ### /dev-only
-    
     # get raw directory list 
     varRawDirList = getRawDirList( cfgStorageRoot )
     # exit if something wrong
@@ -111,11 +111,14 @@ if __name__ == '__main__':
     varRawDirListInfo = getRawDirListInfo( cfgStorageRoot, varRawDirList )
     # sort out collected info to subfolders / files
     varSubDirList, varFileList = sortOutCollected( varRawDirListInfo )
+    # push subfolders info message to MQ, if any
+    if len( varSubDirList ) > 0:
+        # TODO make an agreement about arguments list
+        sendMessageToQM('Subfolders found', varSubDirList )
+        pass
     
-    
-         
+    '''     
     print '\nlen( varSubDirList ):\t' + str( len( varSubDirList )) ###
-    
     for item in varSubDirList:
         print item
         pass 
@@ -123,5 +126,5 @@ if __name__ == '__main__':
     for item in varFileList:
         print item
         pass 
-    
+    '''
     pass
