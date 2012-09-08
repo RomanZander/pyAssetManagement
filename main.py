@@ -27,7 +27,6 @@ import re
 
 
 # cfgStorageRoot = "c:\_GitHub\pySequenceTester\test4"
-# cfgStorageRoot = "d:\\dev.Git\\pySequenceTester\\test4"
 cfgStorageRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
 
 # tuples with media file extentions 
@@ -36,7 +35,7 @@ cfgSeqenceMediaExt = '.dpx', '.tif', '.jpg'
 
 # set and compile regExp 
 cfgRePattern = '^(.*\D)?(\d+)?(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
-### cfgReCompiled = re.compile( cfgRePattern, re.I ) 
+cfgReCompiled = re.compile( cfgRePattern, re.I ) 
 
 varRawDirList = [] # list for folder's items
 varRawDirListInfo = [] # list for folder's items info
