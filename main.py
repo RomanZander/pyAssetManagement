@@ -2,17 +2,15 @@
 '''
 @summary: AssetManagement main
 @since: 2012.08.26
-@version: 0.0.1
+@version: 0.0.2
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
 # ---------------------------------------------------------------------------------------------
 # TODO
 # ---------------------------------------------------------------------------------------------
-from win32verstamp import Var
 """
-    raw list dir
-    qMessage "folder is gone"
+    Smart reduce sequence media list
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
@@ -160,10 +158,5 @@ if __name__ == '__main__':
         # TODO make an agreement about arguments list
         sendMessageToQM('NO Sequence-media found' )
     
-    '''
-    print '\n varFileMedia:\t' + str( len( varFileMedia )) ###
-    for item in varFileMedia:
-        ### print item
-        pass 
-    '''
+
     pass
