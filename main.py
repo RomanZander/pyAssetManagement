@@ -23,7 +23,7 @@ import pprint ###
 
 import os
 from stat import ( S_ISDIR, S_ISREG )
-# import re
+import re
 
 
 # cfgScanRoot = "c:\_GitHub\pySequenceTester\test4"
@@ -38,8 +38,8 @@ cfgFileMediaExt = '.mov', '.avi', '.mp4'
 cfgSequenceMediaExt = '.dpx', '.tif', '.jpg', '.png'
 
 # set and compile regExp 
-#cfgRePattern = '^(.*\D)?(\d+)?(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
-#cfgReCompiled = re.compile( cfgRePattern, re.I ) 
+cfgRePattern = '^(.*\D)?(\d+)(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
+cfgReCompiled = re.compile( cfgRePattern, re.I ) 
 
 varRawDirList = [] # list for folder's items
 varRawDirListInfo = [] # list for folder's items info
@@ -106,6 +106,16 @@ def isSequenceMedia( listItem ):
     # check if lower-cased name ends with one of the 'sequence media extentions' tuple's values
     return listItem['name'].lower().endswith( cfgSequenceMediaExt )
 
+def isMatchPattern( listItem ):
+    # tests item's 'name' dict value by name convention regexp pattern
+    return cfgReCompiled.match( listItem['name'] )
+ 
+def smartReduceMediaList( sequenceMediaList ):
+    
+    ###
+    reducedMedialist = filter( isMatchPattern, sequenceMediaList )
+    
+    return reducedMedialist 
 
 if __name__ == '__main__':
     # get raw directory list 
@@ -139,13 +149,15 @@ if __name__ == '__main__':
     varSequenceMediaList = filter( isSequenceMedia, varFileList )
     
     # TODO smart reduce sequence media list
-    
+    varReducedSequenceMediaList = smartReduceMediaList( varSequenceMediaList )
     
     # push SEQUENCE-MEDIA info message to MQ, if any
-    if len( varSequenceMediaList ) > 0:
-        sendMessageToQM('Sequence-media found', varSequenceMediaList ) # sequence-based media files list
+    if len( varReducedSequenceMediaList ) > 0:
+        sendMessageToQM('Sequence-media found', varReducedSequenceMediaList ) # sequence-based media files list
     else: # if empty 
         sendMessageToQM('NO Sequence-media found', cfgScanRoot  ) # current scan folder
     
+    ### 
+    # pprint.pprint( varReducedSequenceMediaList ) ###
 
     pass
