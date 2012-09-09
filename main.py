@@ -26,11 +26,11 @@ from stat import ( S_ISDIR, S_ISREG )
 # import re
 
 
-# cfgStorageRoot = "c:\_GitHub\pySequenceTester\test4"
-cfgStorageRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
+# cfgScanRoot = "c:\_GitHub\pySequenceTester\test4"
+cfgScanRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
 if len( sys.argv ) > 1: ### 
-    cfgStorageRoot = sys.argv[1] ###
-print '\ncfgStorageRoot:', cfgStorageRoot, '\n------------' ###
+    cfgScanRoot = sys.argv[1] ###
+print '\ncfgStorageRoot:', cfgScanRoot, '\n------------' ###
 
 
 # tuples with media file extentions (lower-case!)
@@ -46,9 +46,9 @@ varRawDirListInfo = [] # list for folder's items info
 varSubDirList = [] # list for folder's subfolders
 varFileList = [] # list for folder's files
 
-def sendMessageToQM( label, content = None ): # send message to MQ server
+def sendMessageToQM( message, content = None ): # send message to MQ server
     # TODO make an agreement about message protocol
-    print '\n### send to MQ:', label ###
+    print '\n### send to MQ:', message ###
     if content != None: ###
         print type( content ), ':', len( content ), ':' ###
     ### pprint.pprint( content ) ###
@@ -59,11 +59,8 @@ def getRawDirList( RootFolder ): # let's read raw directory listing
         rawDirList = os.listdir( RootFolder )
     except:
         # TODO: log exception
-        # send exception message to MQ
-        sendMessageToQM('Ooops! Folder is gone', RootFolder )
         return False
     # TODO: log info listing
-    # print '### OK: items in folder ', RootFolder, ' : ', len( rawDirList ) ###
     return rawDirList
 
 def getRawDirListInfo( RootFolder, FolderListing ):
@@ -73,7 +70,7 @@ def getRawDirListInfo( RootFolder, FolderListing ):
         itemStat = os.stat( RootFolder + os.sep +  item ) 
         # string concatenation instead os.path.join( RootFolder, item )
         itemInfo = {} # create dummy dict for collected values 
-        itemInfo['path'] = cfgStorageRoot
+        itemInfo['path'] = cfgScanRoot
         itemInfo['name'] = item 
         itemInfo['mode'] = itemStat.st_mode
         itemInfo['size'] = itemStat.st_size
@@ -112,36 +109,31 @@ def isSequenceMedia( listItem ):
 
 if __name__ == '__main__':
     # get raw directory list 
-    varRawDirList = getRawDirList( cfgStorageRoot )
+    varRawDirList = getRawDirList( cfgScanRoot )
     # exit if something wrong
     if varRawDirList == False:
+        sendMessageToQM('Ooops! Folder is gone', cfgScanRoot ) # current scan folder
         exit( 0 ) # raise SystemExit with the 0 exit code.
     
     # get stat info about raw directory list items
-    varRawDirListInfo = getRawDirListInfo( cfgStorageRoot, varRawDirList )
-    # sort out collected info to subfolders / files
+    varRawDirListInfo = getRawDirListInfo( cfgScanRoot, varRawDirList )
+    # sort out collected info to subfolders / files list
     varSubDirList, varFileList = sortOutCollected( varRawDirListInfo )
     
     # push SUBFOLDERS info message to MQ, if any
     if len( varSubDirList ) > 0:
-        # TODO make an agreement about arguments list
-        sendMessageToQM('Subfolders found', varSubDirList )
-    # if empty
-    else:
-        # TODO make an agreement about arguments list
-        sendMessageToQM('NO Subfolders found')
+        sendMessageToQM( 'Subfolders found', varSubDirList ) # subfolders list
+    else: # if empty
+        sendMessageToQM( 'NO Subfolders found', cfgScanRoot ) # current scan folder
     
     # filter file-type media
     varFileMediaList = filter( isFileMedia, varFileList )
     
     # push FILE-MEDIA info message to MQ, if any
     if len( varFileMediaList ) > 0:
-        # TODO make an agreement about arguments list
-        sendMessageToQM('File-media found', varFileMediaList )
-    # if empty
-    else:
-        # TODO make an agreement about arguments list
-        sendMessageToQM('NO File-media found')
+        sendMessageToQM( 'File-media found', varFileMediaList ) # file-based media files list
+    else: # if empty
+        sendMessageToQM( 'NO File-media found', cfgScanRoot ) # current scan folder
     
     # filter sequence-type media
     varSequenceMediaList = filter( isSequenceMedia, varFileList )
@@ -149,14 +141,11 @@ if __name__ == '__main__':
     # TODO smart reduce sequence media list
     
     
-    # ### push SEQUENCE-MEDIA info message to MQ, if any
+    # push SEQUENCE-MEDIA info message to MQ, if any
     if len( varSequenceMediaList ) > 0:
-        # TODO make an agreement about arguments list
-        sendMessageToQM('Sequence-media found', varSequenceMediaList )
-    # if empty
-    else: 
-        # TODO make an agreement about arguments list
-        sendMessageToQM('NO Sequence-media found' )
+        sendMessageToQM('Sequence-media found', varSequenceMediaList ) # sequence-based media files list
+    else: # if empty 
+        sendMessageToQM('NO Sequence-media found', cfgScanRoot  ) # current scan folder
     
 
     pass
