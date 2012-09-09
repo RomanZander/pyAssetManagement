@@ -21,10 +21,11 @@ from win32verstamp import Var
     ...
 '''
 import sys ###
+import pprint ###
 
 import os
 from stat import ( S_ISDIR, S_ISREG )
-import re
+# import re
 
 
 # cfgStorageRoot = "c:\_GitHub\pySequenceTester\test4"
@@ -35,26 +36,27 @@ print '\ncfgStorageRoot:', cfgStorageRoot, '\n------------' ###
 
 
 # tuples with media file extentions (lower-case!)
-cfgFileMediaExt = '.mov', '.avi'
-cfgSeqenceMediaExt = '.dpx', '.tif', '.jpg'
+cfgFileMediaExt = '.mov', '.avi', '.mp4'
+cfgSequenceMediaExt = '.dpx', '.tif', '.jpg', '.png'
 
 # set and compile regExp 
-cfgRePattern = '^(.*\D)?(\d+)?(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
-cfgReCompiled = re.compile( cfgRePattern, re.I ) 
+#cfgRePattern = '^(.*\D)?(\d+)?(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
+#cfgReCompiled = re.compile( cfgRePattern, re.I ) 
 
 varRawDirList = [] # list for folder's items
 varRawDirListInfo = [] # list for folder's items info
 varSubDirList = [] # list for folder's subfolders
 varFileList = [] # list for folder's files
 
-# send message to MQ server
-def sendMessageToQM( label, content ):
+def sendMessageToQM( label, content = None ): # send message to MQ server
     # TODO make an agreement about message protocol
-    print '### send to MQ:', label, ':', type( content ), len( content ), ':\n', content ###
+    print '\n### send to MQ:', label ###
+    if content != None: ###
+        print type( content ), ':', len( content ), ':' ###
+    ### pprint.pprint( content ) ###
     pass
 
-# let's read raw directory listing
-def getRawDirList( RootFolder ):
+def getRawDirList( RootFolder ): # let's read raw directory listing
     try: 
         rawDirList = os.listdir( RootFolder )
     except:
@@ -101,14 +103,14 @@ def sortOutCollected( rawDirListInfo ):
     # returns tuple of folders / files lists
     return  ( subDirList, fileList )
 
-def isFileMedia( itemList ):
-    print '### isFileMedia(): ', itemList['name']
-    print itemList['name'].lower().endswith( cfgFileMediaExt )
-    if True:
-        return True
-    else:
-        return False
-    pass
+def isFileMedia( listItem ):
+    # check if lower-cased name ends with one of the 'file media extentions' tuple's values
+    return listItem['name'].lower().endswith( cfgFileMediaExt )
+
+def isSequenceMedia( listItem ):
+    # check if lower-cased name ends with one of the 'sequence media extentions' tuple's values
+    return listItem['name'].lower().endswith( cfgSequenceMediaExt )
+
 
 if __name__ == '__main__':
     # get raw directory list 
@@ -116,22 +118,52 @@ if __name__ == '__main__':
     # exit if something wrong
     if varRawDirList == False:
         exit( 0 ) # raise SystemExit with the 0 exit code.
+    
     # get stat info about raw directory list items
     varRawDirListInfo = getRawDirListInfo( cfgStorageRoot, varRawDirList )
     # sort out collected info to subfolders / files
     varSubDirList, varFileList = sortOutCollected( varRawDirListInfo )
-    # push subfolders info message to MQ, if any
+    
+    # push SUBFOLDERS info message to MQ, if any
     if len( varSubDirList ) > 0:
         # TODO make an agreement about arguments list
         sendMessageToQM('Subfolders found', varSubDirList )
-        pass
-    # filter file-only-type media
-    varFileMedia = filter( isFileMedia, varFileList )
+    # if empty
+    else:
+        # TODO make an agreement about arguments list
+        sendMessageToQM('NO Subfolders found')
     
-    ''' '''     
+    # filter file-type media
+    varFileMediaList = filter( isFileMedia, varFileList )
+    
+    # push FILE-MEDIA info message to MQ, if any
+    if len( varFileMediaList ) > 0:
+        # TODO make an agreement about arguments list
+        sendMessageToQM('File-media found', varFileMediaList )
+    # if empty
+    else:
+        # TODO make an agreement about arguments list
+        sendMessageToQM('NO File-media found')
+    
+    # filter sequence-type media
+    varSequenceMediaList = filter( isSequenceMedia, varFileList )
+    
+    # TODO smart reduce sequence media list
+    
+    
+    # ### push SEQUENCE-MEDIA info message to MQ, if any
+    if len( varSequenceMediaList ) > 0:
+        # TODO make an agreement about arguments list
+        sendMessageToQM('Sequence-media found', varSequenceMediaList )
+    # if empty
+    else: 
+        # TODO make an agreement about arguments list
+        sendMessageToQM('NO Sequence-media found' )
+    
+    '''
     print '\n varFileMedia:\t' + str( len( varFileMedia )) ###
     for item in varFileMedia:
-        print item
+        ### print item
         pass 
-    ''' '''
+    '''
     pass
