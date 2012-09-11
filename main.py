@@ -10,27 +10,26 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    Smart reduce sequence media list
+    add logging
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
-    ...
+    0.0.2 Smart reduce sequence media list
 '''
 import sys ###
 import pprint ###
+import logging
 
 import os
 from stat import ( S_ISDIR, S_ISREG )
 import re
 
-
-# cfgScanRoot = "c:\_GitHub\pySequenceTester\test4"
-cfgScanRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
+# cfgScanRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
+cfgScanRoot = "C:\\_GitHub\\pyAssetManagement\\test1"
 if len( sys.argv ) > 1: ### 
     cfgScanRoot = sys.argv[1] ###
-print '\ncfgStorageRoot:', cfgScanRoot, '\n------------' ###
 
 
 # tuples with media file extentions (lower-case!)
@@ -110,14 +109,110 @@ def isMatchPattern( listItem ):
     # tests item's 'name' dict value by name convention regexp pattern
     return cfgReCompiled.match( listItem['name'] )
  
+def smartSortSplittedName( a, b ):
+    # custom compare for sort by file extention, then by file prefix, then by file index
+    aListed = [ a['nameExtention'], a['namePrefix'], a['nameIndex'] ]
+    bListed = [ b['nameExtention'], b['namePrefix'], b['nameIndex'] ]
+    if aListed > bListed:
+        return 1
+    elif aListed == bListed:
+        return 0
+    else:
+        return -1
+ 
 def smartReduceMediaList( sequenceMediaList ):
+    # filter by naming convention compliance
+    namingConventionMatched = filter( isMatchPattern, sequenceMediaList )
     
-    ###
-    reducedMedialist = filter( isMatchPattern, sequenceMediaList )
+    # build splitted file list (splitted by extention, filename prefix and file index)
+    splittedNameList = []
+    for item in namingConventionMatched:
+        # build up data for sort with regexp
+        splittedNameList.append( {
+                                  'path': item['path'],
+                                  'namePrefix': cfgReCompiled.match( item['name'] ).group(1),
+                                  'nameIndex': cfgReCompiled.match( item['name'] ).group(2),
+                                  'nameExtention': cfgReCompiled.match( item['name'] ).group(3),
+                                  'size':item['size'],
+                                  'mtime':item['mtime'] 
+                                  } )
+    # custom sort splitted file list
+    splittedNameList.sort( cmp = smartSortSplittedName )
     
-    return reducedMedialist 
+    # recollect by extention
+    collectedSequences = []
+    lastToCompare = None
+    for splittedNameItem in splittedNameList:
+        
+        # 1st iteration
+        if lastToCompare == None:
+            # remember 1st for follow comparison
+            lastToCompare = { 
+                             'namePrefix': splittedNameItem['namePrefix'],
+                             'nameIndex': splittedNameItem['nameIndex'],
+                             'nameExtention': splittedNameItem['nameExtention'],
+                             }
+            # store 1st element data
+            collectedSequences.append( {
+                                        'namePrefix': splittedNameItem['namePrefix'],
+                                        'nameIndexStart': splittedNameItem['nameIndex'],
+                                        'nameIndexFinish': splittedNameItem['nameIndex'],
+                                        'nameExtention': splittedNameItem['nameExtention'],
+                                        'size': splittedNameItem['size'],
+                                        'mtime': splittedNameItem['mtime']
+                                         } )
+        
+        # same extention and prefix, but +1 
+        elif  (               
+               splittedNameItem['namePrefix'] == lastToCompare['namePrefix'] and
+               splittedNameItem['nameExtention'] == lastToCompare['nameExtention'] and
+               int( splittedNameItem['nameIndex']) == int(lastToCompare['nameIndex']) + 1 
+               ) :
+            # get dictionary from last record:
+            lastRecord = collectedSequences[ len(collectedSequences) - 1 ]
+            # modify sequence finish
+            lastRecord['nameIndexFinish'] = splittedNameItem['nameIndex']
+            # modify sequence size
+            lastRecord['size'] = lastRecord['size'] + splittedNameItem['size']
+            # modify sequence modification time, if later
+            if lastRecord['mtime'] < splittedNameItem['mtime'] :
+                lastRecord['mtime'] = splittedNameItem['mtime']
+            # re-store data to last record
+            collectedSequences[ len(collectedSequences) - 1 ] = lastRecord
+            # refresh remembered last
+            lastToCompare = { 
+                             'namePrefix': splittedNameItem['namePrefix'],
+                             'nameIndex': splittedNameItem['nameIndex'],
+                             'nameExtention': splittedNameItem['nameExtention'],
+                             }
+        
+        # extention or prefix changed or not +1
+        else:
+            # store next element data
+            collectedSequences.append( {
+                                        'namePrefix': splittedNameItem['namePrefix'],
+                                        'nameIndexStart': splittedNameItem['nameIndex'],
+                                        'nameIndexFinish': splittedNameItem['nameIndex'],
+                                        'nameExtention': splittedNameItem['nameExtention'],
+                                        'size': splittedNameItem['size'],
+                                        'mtime': splittedNameItem['mtime']
+                                         } )
+            # refresh remembered last
+            lastToCompare = { 
+                             'namePrefix': splittedNameItem['namePrefix'],
+                             'nameIndex': splittedNameItem['nameIndex'],
+                             'nameExtention': splittedNameItem['nameExtention'],
+                             }
+
+    print '\n### collectedSequences:' ###
+    for item in collectedSequences: ###
+        print item ###
+    #pprint.pprint( collectedSequences ) ###
+    
+    return collectedSequences 
 
 if __name__ == '__main__':
+    
     # get raw directory list 
     varRawDirList = getRawDirList( cfgScanRoot )
     # exit if something wrong
@@ -136,7 +231,7 @@ if __name__ == '__main__':
     else: # if empty
         sendMessageToQM( 'NO Subfolders found', cfgScanRoot ) # current scan folder
     
-    # filter file-type media
+    # filter file-type ('.mov', '.r3d' etc) media
     varFileMediaList = filter( isFileMedia, varFileList )
     
     # push FILE-MEDIA info message to MQ, if any
@@ -145,10 +240,10 @@ if __name__ == '__main__':
     else: # if empty
         sendMessageToQM( 'NO File-media found', cfgScanRoot ) # current scan folder
     
-    # filter sequence-type media
+    # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
     varSequenceMediaList = filter( isSequenceMedia, varFileList )
     
-    # TODO smart reduce sequence media list
+    # TODO: smart reduce sequence media list
     varReducedSequenceMediaList = smartReduceMediaList( varSequenceMediaList )
     
     # push SEQUENCE-MEDIA info message to MQ, if any
@@ -157,7 +252,5 @@ if __name__ == '__main__':
     else: # if empty 
         sendMessageToQM('NO Sequence-media found', cfgScanRoot  ) # current scan folder
     
-    ### 
-    # pprint.pprint( varReducedSequenceMediaList ) ###
 
     pass
