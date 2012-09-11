@@ -10,13 +10,13 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    add current path reconstruction
     add arg parsing (+logging options)
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.4 +real path reconstruction
     0.0.3 +logging
     0.0.2 +Smart reduce sequence media list
 '''
@@ -31,13 +31,14 @@ import re
 suppLoglevel = sys.argv[-1]
 suppLevelNumeric = getattr(logging, suppLoglevel.upper(), None)
 if isinstance(suppLevelNumeric, int):
-    logging.basicConfig(level=suppLevelNumeric)
+    logging.basicConfig(level=suppLevelNumeric, format='%(asctime)s %(message)s')
 # logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 cfgScanRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
 # cfgScanRoot = "C:\\_GitHub\\pyAssetManagement\\test1"
 if len( sys.argv ) > 1: ### 
     cfgScanRoot = sys.argv[1] ###
+cfgScanRoot = os.path.realpath(cfgScanRoot)
 
 # tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
