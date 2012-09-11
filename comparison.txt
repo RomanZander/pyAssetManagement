@@ -1,0 +1,73 @@
+D:\dev.Git\pyAssetManagement>python -m cProfile -s cumulative main.py ..\pySequenceTester\test4
+         2160918 function calls (2160894 primitive calls) in 14.589 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.099    0.099   14.589   14.589 main.py:8(<module>)
+        1    0.752    0.752    8.262    8.262 main.py:76(getRawDirListInfo)
+    86400    7.451    0.000    7.451    0.000 {nt.stat}
+        1    1.776    1.776    4.154    4.154 main.py:134(smartReduceMediaList)
+   345600    1.528    0.000    1.528    0.000 {method 'match' of '_sre.SRE_Pattern' objects}
+        3    0.231    0.077    1.383    0.461 {filter}
+        1    0.396    0.396    0.796    0.796 main.py:91(sortOutCollected)
+    86400    0.149    0.000    0.483    0.000 main.py:119(isMatchPattern)
+        1    0.000    0.000    0.443    0.443 main.py:67(getRawDirList)
+        1    0.443    0.443    0.443    0.443 {nt.listdir}
+    86400    0.195    0.000    0.340    0.000 main.py:111(isFileMedia)
+    86400    0.196    0.000    0.330    0.000 main.py:115(isSequenceMedia)
+        1    0.118    0.118    0.290    0.290 {method 'sort' of 'list' objects}
+   259200    0.184    0.000    0.184    0.000 {method 'group' of '_sre.SRE_Match' objects}
+    86400    0.126    0.000    0.180    0.000 stat.py:40(S_ISDIR)
+    86400    0.125    0.000    0.175    0.000 stat.py:49(S_ISREG)
+    86399    0.172    0.000    0.172    0.000 main.py:123(smartSortSplittedName)
+   259370    0.154    0.000    0.154    0.000 {method 'append' of 'list' objects}
+   172802    0.148    0.000    0.148    0.000 {method 'lower' of 'str' objects}
+   172800    0.131    0.000    0.131    0.000 {method 'endswith' of 'str' objects}
+   172800    0.104    0.000    0.104    0.000 stat.py:24(S_IFMT)
+172967/172963    0.087    0.000    0.087    0.000 {len}
+
+
+=============================================
+
+D:\dev.Git\pyAssetManagement>python -m cProfile -s cumulative main.py ..\pySequenceTester\test4 info
+2012-09-12 01:50:39,858 cfgScanRoot:
+..\pySequenceTester\test4
+2012-09-12 01:50:48,796 send to MQ:
+NO Subfolders found
+..\pySequenceTester\test4
+2012-09-12 01:50:49,217 send to MQ:
+NO File-media found
+..\pySequenceTester\test4
+2012-09-12 01:50:54,000 send to MQ:
+Sequence-media found
+[{'nameExtention': '.dpx', 'mtime': 1346107797.90625, 'nameIndexFinish': '0086400', 'namePrefix': 'huge-length-dummy-seq
+uence.', 'nameIndexStart': '0000001', 'size': 691207L}]
+
+         2161182 function calls (2161158 primitive calls) in 14.177 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.096    0.096   14.177   14.177 main.py:8(<module>)
+        1    0.725    0.725    7.709    7.709 main.py:76(getRawDirListInfo)
+    86400    6.924    0.000    6.924    0.000 {nt.stat}
+        1    1.869    1.869    4.292    4.292 main.py:134(smartReduceMediaList)
+   345600    1.560    0.000    1.560    0.000 {method 'match' of '_sre.SRE_Pattern' objects}
+        3    0.231    0.077    1.377    0.459 {filter}
+        1    0.396    0.396    0.792    0.792 main.py:91(sortOutCollected)
+    86400    0.147    0.000    0.478    0.000 main.py:119(isMatchPattern)
+        1    0.000    0.000    0.449    0.449 main.py:67(getRawDirList)
+        1    0.449    0.449    0.449    0.449 {nt.listdir}
+    86400    0.196    0.000    0.339    0.000 main.py:111(isFileMedia)
+    86400    0.195    0.000    0.330    0.000 main.py:115(isSequenceMedia)
+        1    0.121    0.121    0.294    0.294 {method 'sort' of 'list' objects}
+   259200    0.188    0.000    0.188    0.000 {method 'group' of '_sre.SRE_Match' objects}
+    86400    0.125    0.000    0.179    0.000 stat.py:40(S_ISDIR)
+    86399    0.172    0.000    0.172    0.000 main.py:123(smartSortSplittedName)
+    86400    0.122    0.000    0.172    0.000 stat.py:49(S_ISREG)
+   259370    0.162    0.000    0.162    0.000 {method 'append' of 'list' objects}
+   172810    0.146    0.000    0.146    0.000 {method 'lower' of 'str' objects}
+   172800    0.132    0.000    0.132    0.000 {method 'endswith' of 'str' objects}
+   172800    0.104    0.000    0.104    0.000 stat.py:24(S_IFMT)
+172975/172971    0.089    0.000    0.089    0.000 {len}
