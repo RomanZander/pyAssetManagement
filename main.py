@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement main
 @since: 2012.08.26
-@version: 0.0.2
+@version: 0.0.4
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,27 +10,34 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    add logging
+    add current path reconstruction
+    add arg parsing (+logging options)
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
-    0.0.2 Smart reduce sequence media list
+    0.0.3 +logging
+    0.0.2 +Smart reduce sequence media list
 '''
 import sys ###
 import pprint ###
 import logging
-
 import os
 from stat import ( S_ISDIR, S_ISREG )
 import re
 
-# cfgScanRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
-cfgScanRoot = "C:\\_GitHub\\pyAssetManagement\\test1"
+
+suppLoglevel = sys.argv[-1]
+suppLevelNumeric = getattr(logging, suppLoglevel.upper(), None)
+if isinstance(suppLevelNumeric, int):
+    logging.basicConfig(level=suppLevelNumeric)
+# logging.basicConfig(filename='example.log',level=logging.DEBUG)
+
+cfgScanRoot = "d:\\dev.Git\\pyAssetManagement\\test1"
+# cfgScanRoot = "C:\\_GitHub\\pyAssetManagement\\test1"
 if len( sys.argv ) > 1: ### 
     cfgScanRoot = sys.argv[1] ###
-
 
 # tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
@@ -47,10 +54,14 @@ varFileList = [] # list for folder's files
 
 def sendMessageToQM( message, content = None ): # send message to MQ server
     # TODO make an agreement about message protocol
+    # QM code here
+    logging.info('send to MQ:\n%s\n%s\n', message, content) 
+    '''
     print '\n### send to MQ:', message ###
     if content != None: ###
         print type( content ), ':', len( content ), ':' ###
     ### pprint.pprint( content ) ###
+    '''
     pass
 
 def getRawDirList( RootFolder ): # let's read raw directory listing
@@ -203,15 +214,17 @@ def smartReduceMediaList( sequenceMediaList ):
                              'nameIndex': splittedNameItem['nameIndex'],
                              'nameExtention': splittedNameItem['nameExtention'],
                              }
-
+    '''
     print '\n### collectedSequences:' ###
     for item in collectedSequences: ###
         print item ###
     #pprint.pprint( collectedSequences ) ###
-    
+    '''
     return collectedSequences 
 
 if __name__ == '__main__':
+    
+    logging.info('cfgScanRoot:\n%s\n', cfgScanRoot) 
     
     # get raw directory list 
     varRawDirList = getRawDirList( cfgScanRoot )
@@ -243,7 +256,7 @@ if __name__ == '__main__':
     # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
     varSequenceMediaList = filter( isSequenceMedia, varFileList )
     
-    # TODO: smart reduce sequence media list
+    # smart reduce sequence media list
     varReducedSequenceMediaList = smartReduceMediaList( varSequenceMediaList )
     
     # push SEQUENCE-MEDIA info message to MQ, if any
