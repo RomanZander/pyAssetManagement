@@ -2,7 +2,7 @@
 .project
 .settings
 .pydevproject
-
+.log
 
 *.py[co]
 
@@ -31,3 +31,4 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
