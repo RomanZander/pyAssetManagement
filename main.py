@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement main
 @since: 2012.08.26
-@version: 0.0.5
+@version: 0.0.6
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,12 +10,13 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    *
+    seriaize data before send
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.6 +
     0.0.5 +arg parsing (+logging options)
     0.0.4 +real path reconstruction
     0.0.3 +logging
