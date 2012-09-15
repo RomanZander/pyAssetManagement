@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# --------------------
+# TODO: time\localtime?
+# --------------------
+
 import time
 import pika
 import cPickle
@@ -9,14 +14,22 @@ channel = connection.channel()
 channel.queue_declare(queue = 'task_queue', 
                       durable = True)
 
-print ' [*] Waiting for messages. To exit press CTRL+C'
+print ' [*] Waiting for messages. To exit press CTRL+C\n'
 
 def callback(ch, method, properties, body):
-    print " [+] Received {!r}".format(body)
+    print "{!s}: Received  {!r}".format(time.strftime('%H:%M:%S %Y%m%d'), body)
     message = cPickle.loads(body)
     print " [+] Unpickled {!r}".format(message)
+    print " [:] {!r} : msgTimestamp\n [:] {!r} : msgApp_id".format(
+                             time.strftime(
+                                           '%H:%M:%S %Y%m%d', 
+                                           time.localtime(message['msgTimestamp'])
+                                           ),
+                             message['msgApp_id']
+                             )
+    print " [.] Processing..."
     time.sleep(body.count('.'))
-    print " [x] Done"
+    print " [x] Done\n"
     
     ch.basic_ack(delivery_tag = method.delivery_tag)
 

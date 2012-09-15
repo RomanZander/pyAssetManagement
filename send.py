@@ -1,11 +1,22 @@
 # -*- coding: utf-8 -*-
 import sys
+import time
 import pika
 import cPickle
 
-# message = ' '.join(sys.argv[1:]) or "Hello World!"
-message = [1,2,3]
-print 'message:', message 
+data = ' '.join(sys.argv[1:]) or "Hello World!"
+timestamp = time.time()
+
+print "{!s}: Accepted: {!r}".format(
+                                    time.strftime('%H:%M:%S %Y%m%d', time.localtime(timestamp)),
+                                    data
+                                    )
+message = {
+           'msgTimestamp': timestamp,
+           'msgApp_id': 'send.py',
+           'msgPayload': data
+           }
+print ' [.] Message:', message 
 messagePickled = cPickle.dumps(message, -1)
 
 parameters = pika.ConnectionParameters(host = 'localhost')
