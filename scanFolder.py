@@ -29,6 +29,12 @@ import argparse
 import os
 from stat import (S_ISDIR, S_ISREG)
 import re
+import time
+import pika
+import cPickle
+
+# script identificator for QM
+cfgAppID = 'scanFolder'
 
 # tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
@@ -105,24 +111,33 @@ def configLogging():
                                 filename = cfgLogfile, 
                                 filemode = 'a',
                                 level = logLevelNumeric, 
-                                format = '===\n%(levelname)s | %(asctime)s | %(message)s'
+                                format = '%(levelname)s | %(asctime)s | %(message)s'
                                 )
         else: # if empty
             # config log to screen only
             logging.basicConfig(
                                 level = logLevelNumeric, 
-                                format = '===\n%(levelname)s | %(asctime)s | %(message)s'
+                                format = '%(levelname)s | %(asctime)s | %(message)s'
                                 )
         ### logging.basicConfig(filename='example.log', filemode='w')
-        # logging.basicConfig(level=logLevelNumeric, format='===\n%(levelname)s | %(asctime)s | %(message)s')
-        
+        ### logging.basicConfig(level=logLevelNumeric, format='===\n%(levelname)s | %(asctime)s | %(message)s')
     pass
 
 def sendMessageToQM(message, content = None): # send message to MQ server
-    # TODO make an agreement about message protocol
+    # get current timestamp
+    timestamp = time.time()
+    # TODO make an agreement about message protocol:
+    data = {'msgTimestamp': timestamp,
+            'msgAppID': cfgAppID,
+            'msgMessage': message,
+            'msgPayload': content}
+    
     # QM code here
-    logging.info('send to MQ:\n%s\n%s\n', message, content) 
-
+    print '######:', data
+    
+    
+    # logging output
+    logging.info('send to MQ: %s | %s', message, content) 
     pass
 
 def getRawDirList(RootFolder): # let's read raw directory listing
@@ -280,11 +295,10 @@ def smartReduceMediaList(sequenceMediaList):
 if __name__ == '__main__':
     
     parseArgs() # parse from command line
-     
     configLogging() # logging setup 
     
     # logging output
-    logging.info('cfgScanRoot:\n%s\n', cfgScanRoot) 
+    logging.info('cfgScanRoot: %s', cfgScanRoot) 
     
     # get raw directory list 
     varRawDirList = getRawDirList(cfgScanRoot)

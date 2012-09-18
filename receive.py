@@ -20,12 +20,12 @@ def callback(ch, method, properties, body):
     print "{!s}: Received  {!r}".format(time.strftime('%H:%M:%S %Y%m%d'), body)
     message = cPickle.loads(body)
     print " [+] Unpickled {!r}".format(message)
-    print " [:] {!r} : msgTimestamp\n [:] {!r} : msgApp_id".format(
+    print " [:] {!r} : msgTimestamp\n [:] {!r} : msgAppID".format(
                              time.strftime(
                                            '%H:%M:%S %Y%m%d', 
                                            time.localtime(message['msgTimestamp'])
                                            ),
-                             message['msgApp_id']
+                             message['msgAppID']
                              )
     print " [.] Processing..."
     time.sleep(body.count('.'))

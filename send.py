@@ -13,7 +13,7 @@ print "{!s}: Accepted: {!r}".format(
                                     )
 message = {
            'msgTimestamp': timestamp,
-           'msgApp_id': 'send.py',
+           'msgAppID': 'send.py',
            'msgPayload': data
            }
 print ' [.] Message:', message 
