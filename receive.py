@@ -18,14 +18,14 @@ print ' [*] Waiting for messages. To exit press CTRL+C\n'
 
 def callback(ch, method, properties, body):
     print "{!s}: Received  {!r}".format(time.strftime('%H:%M:%S %Y%m%d'), body)
-    message = cPickle.loads(body)
-    print " [+] Unpickled {!r}".format(message)
+    data = cPickle.loads(body)
+    print " [+] Unpickled {!r}".format(data)
     print " [:] {!r} : msgTimestamp\n [:] {!r} : msgAppID".format(
                              time.strftime(
                                            '%H:%M:%S %Y%m%d', 
-                                           time.localtime(message['msgTimestamp'])
+                                           time.localtime(data['msgTimestamp'])
                                            ),
-                             message['msgAppID']
+                             data['msgAppID']
                              )
     print " [.] Processing..."
     time.sleep(body.count('.'))

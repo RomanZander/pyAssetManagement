@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*- 
 '''
-@summary: AssetManagement main
+@summary: AssetManagement scanFolder
 @since: 2012.08.26
 @version: 0.0.6
 @author: Roman Zander
