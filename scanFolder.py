@@ -10,20 +10,19 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    seriaize data before send
+    ...
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
-    0.0.6 +
+    0.0.6 +pickle and send to MQ
     0.0.5 +arg parsing (+logging options)
     0.0.4 +real path reconstruction
     0.0.3 +logging
     0.0.2 +Smart reduce sequence media list
 '''
-import sys ###
-import pprint ###
+
 import logging
 import argparse
 import os
@@ -33,12 +32,16 @@ import time
 import pika
 import cPickle
 
-# script identificator for QM
-cfgAppID = 'scanFolder'
+# config for RabbitMQ
+cfgRabbitAppID = 'scanFolder' # script identificator
+cfgRabbitHost = 'localhost'
+cfgRabbitExchange = ''
+cfgRabbitQueue = 'scanResult_queue'
+cfgRabbitRoutingKey = 'scanResult_queue'
 
 # tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
-cfgSequenceMediaExt = '.dpx', '.tif', '.jpg', '.png'
+cfgSequenceMediaExt = '.dpx', '.tif', '.tiff', '.j2c', '.jpg', '.png'
 
 # set and compile regExp 
 cfgRePattern = '^(.*\D)?(\d+)(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
@@ -124,33 +127,49 @@ def configLogging():
     pass
 
 def sendMessageToQM(message, content = None): # send message to MQ server
-    # get current timestamp
-    timestamp = time.time()
-    # TODO make an agreement about message protocol:
-    data = {'msgTimestamp': timestamp,
-            'msgAppID': cfgAppID,
-            'msgMessage': message,
-            'msgPayload': content}
-    
-    # QM code here
-    print '######:', data
-    
-    
-    # logging output
-    logging.info('send to MQ: %s | %s', message, content) 
+    # create RabbitMQ connection
+    parameters = pika.ConnectionParameters(host = cfgRabbitHost)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    if connection.is_open:
+        # get current timestamp
+        timestamp = time.time()
+        # An agreement about message:
+        data = {'msgTimestamp': timestamp,
+                'msgAppID': cfgRabbitAppID,
+                'msgMessage': message,
+                'msgPayload': content
+                }
+        # conserve data
+        dataPickled = cPickle.dumps(data, -1)
+        # MQ code here
+        channel.queue_declare(
+                    queue = cfgRabbitQueue,
+                    durable = True
+                    )
+        publishproperties = pika.BasicProperties(
+                    delivery_mode = 2 # make message persistent 
+                    ) 
+        channel.basic_publish(
+                    exchange = cfgRabbitExchange,
+                    routing_key = cfgRabbitRoutingKey,
+                    body = dataPickled, # sent data
+                    properties = publishproperties
+                    )        
+        # logging output
+        logging.info('send to MQ: %s | %s', message, content)
+        connection.close()
     pass
 
 def getRawDirList(RootFolder): # let's read raw directory listing
     try: 
         rawDirList = os.listdir(RootFolder)
     except:
-        # TODO: log exception
         return False
-    # TODO: log info listing
     return rawDirList
 
 def getRawDirListInfo(RootFolder, FolderListing):
-    rawDirListInfo = [] # list for collected item's data
+    rawDirListInfo = [] # list for collected item's content
     # collect stat info
     for item in FolderListing:
         itemStat = os.stat(RootFolder + os.sep +  item) 
@@ -214,7 +233,7 @@ def smartReduceMediaList(sequenceMediaList):
     # build splitted file list (splitted by extention, filename prefix and file index)
     splittedNameList = []
     for item in namingConventionMatched:
-        # build up data for sort with regexp
+        # build up content for sort with regexp
         splittedNameList.append({
                                  'path': item['path'],
                                  'namePrefix': cfgReCompiled.match(item['name']).group(1),
@@ -239,7 +258,7 @@ def smartReduceMediaList(sequenceMediaList):
                              'nameIndex': splittedNameItem['nameIndex'],
                              'nameExtention': splittedNameItem['nameExtention'],
                              }
-            # store 1st element data
+            # store 1st element content
             collectedSequences.append( {
                                         'namePrefix': splittedNameItem['namePrefix'],
                                         'nameIndexStart': splittedNameItem['nameIndex'],
@@ -264,7 +283,7 @@ def smartReduceMediaList(sequenceMediaList):
             # modify sequence modification time, if later
             if lastRecord['mtime'] < splittedNameItem['mtime'] :
                 lastRecord['mtime'] = splittedNameItem['mtime']
-            # re-store data to last record
+            # re-store content to last record
             collectedSequences[len(collectedSequences) - 1] = lastRecord
             # refresh remembered last
             lastToCompare = { 
@@ -275,7 +294,7 @@ def smartReduceMediaList(sequenceMediaList):
         
         # extention or prefix changed or not +1
         else:
-            # store next element data
+            # store next element content
             collectedSequences.append({
                                        'namePrefix': splittedNameItem['namePrefix'],
                                        'nameIndexStart': splittedNameItem['nameIndex'],
