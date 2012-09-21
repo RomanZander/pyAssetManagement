@@ -18,7 +18,8 @@ data = {
 print ' [.] data:', data 
 dataPickled = cPickle.dumps(data, -1)
 
-parameters = pika.ConnectionParameters(host = 'localhost')
+# add record to hosts on local dev /'localhost'
+parameters = pika.ConnectionParameters(host = '10.10.11.135')
 connection = pika.BlockingConnection(parameters)
 channel = connection.channel()
 channel.queue_declare(
