@@ -10,7 +10,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    ...
+    listen MQ for scan task
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
@@ -34,7 +34,7 @@ import cPickle
 
 # config for RabbitMQ
 cfgRabbitAppID = 'scanFolder' # script identificator
-cfgRabbitHost = 'localhost'
+cfgRabbitHost = '10.10.11.135' # add record to hosts on local dev /'localhost'
 cfgRabbitExchange = ''
 cfgRabbitQueue = 'scanResult_queue'
 cfgRabbitRoutingKey = 'scanResult_queue'
