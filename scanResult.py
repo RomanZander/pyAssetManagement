@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.2
+@version: 0.0.3
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,10 +10,11 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    process unsuccess connection to RabbitMQ
-    process unsuccess connection to In MQ channel
-    process unsuccess connection to Out MQ channel
-     ...
+    ...send new subfolder tasks to MQ
+    ...SQL|data comparing logic
+    ...process unsuccess connection to RabbitMQ
+    ...process unsuccess connection to In MQ channel
+    ...process unsuccess connection to Out MQ channel
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
@@ -29,7 +30,7 @@ import cPickle
 
 # config for RabbitMQ
 cfgRabbitAppID = 'scanResult' # script identificator
-cfgRabbitHost = 'localhost'
+cfgRabbitHost = '10.10.11.135' # add record to hosts on local dev /'localhost'
 cfgRabbitExchange = ''
 cfgRabbitInQueue = 'scanResult_queue'
 cfgRabbitInRoutingKey = 'scanResult_queue'
