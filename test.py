@@ -12,7 +12,7 @@
 """
     SAQ|data compare logic
 """
-# from FolderScan
+# from folderScan
 MQdata = [{'name': 'test-1-mediaFile.mov', 'size': 10L}, 
           {'name': 'test-2-mediaFile.mov', 'size': 10L},
           {'name': 'test-5-mediaFile.mov', 'size': 10L}, # new found
@@ -26,15 +26,28 @@ SQLdata = [{'name': 'test-1-mediaFile.mov', 'size': 10L}, # same
 # print "MQ data: {!r}".format(MQdata)
 # print "SQL data: {!r}".format(MQdata)
 
+def insertData(data):
+    print "INSERT: {0!r}".format(data)
+    pass
+
+def updateData(data):
+    print "UPDATE: {0!r}".format(data)
+    pass
+
+def deleteData(data):
+    print "DELETE: {0!r}".format(data)
+    pass
+
+
+
 for mqRecord in MQdata:
-    if mqRecord in SQLdata:
-        # same record
-        print "=== same records:\nMQ: {!r}".format(mqRecord)
-    else:
-        print "### new in:\nMQ: {!r}".format(mqRecord)
+    if mqRecord not in SQLdata:
+        # not in DB, new or modified
+        print "### newborn in:\nMQ: {!r}".format(mqRecord)
 
 for sqlRecord in SQLdata:
     if sqlRecord not in MQdata:
+        # not in scan results, odl or modified   
         print "<<< obsolete in:\nSQL: {!r}".format(sqlRecord)
 
 pass
