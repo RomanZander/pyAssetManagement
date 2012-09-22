@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanFolder
 @since: 2012.08.26
-@version: 0.0.6
+@version: 0.0.7a
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -34,7 +34,7 @@ import cPickle
 
 # config for RabbitMQ
 cfgRabbitAppID = 'scanFolder' # script identificator
-cfgRabbitHost = '10.10.11.135' # add record to hosts on local dev /'localhost'
+cfgRabbitHost = 'rabbitmq' # add record to hosts on local dev
 cfgRabbitExchange = ''
 cfgRabbitQueue = 'scanResult_queue'
 cfgRabbitRoutingKey = 'scanResult_queue'
