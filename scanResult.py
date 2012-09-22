@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.3
+@version: 0.0.3a
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -20,6 +20,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.3a + rabbitmq host
     0.0.2 +inbound processor
     0.0.1 +Initial commit
 '''
@@ -30,7 +31,7 @@ import cPickle
 
 # config for RabbitMQ
 cfgRabbitAppID = 'scanResult' # script identificator
-cfgRabbitHost = '10.10.11.135' # add record to hosts on local dev /'localhost'
+cfgRabbitHost = 'rabbitmq' # add record to hosts on local dev
 cfgRabbitExchange = ''
 cfgRabbitInQueue = 'scanResult_queue'
 cfgRabbitInRoutingKey = 'scanResult_queue'
