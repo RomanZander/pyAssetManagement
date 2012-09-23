@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanFolder
 @since: 2012.08.26
-@version: 0.0.7a
+@version: 0.0.7
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -16,6 +16,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.7 +folder context to message 
     0.0.6 +pickle and send to MQ
     0.0.5 +arg parsing (+logging options)
     0.0.4 +real path reconstruction
@@ -150,6 +151,7 @@ def sendMessageToQM(message, content = None): # send message to MQ server
         data = {'msgTimestamp': timestamp,
                 'msgAppID': cfgRabbitAppID,
                 'msgMessage': message,
+                'msgFolderContext': cfgScanRoot,
                 'msgPayload': content
                 }
         # conserve data
@@ -187,7 +189,6 @@ def getRawDirListInfo(RootFolder, FolderListing):
         itemStat = os.stat(RootFolder + os.sep +  item) 
         # string concatenation instead os.path.join( RootFolder, item )
         itemInfo = {} # create dummy dict for collected values 
-        itemInfo['path'] = cfgScanRoot
         itemInfo['name'] = item 
         itemInfo['mode'] = itemStat.st_mode
         itemInfo['size'] = itemStat.st_size
@@ -202,8 +203,7 @@ def sortOutCollected(rawDirListInfo):
     # iterate and sort out
     for itemInfo in rawDirListInfo:
         # create output item dictionary
-        outItem = {'path':itemInfo['path'], 
-                   'name':itemInfo['name'], 
+        outItem = {'name':itemInfo['name'], 
                    'size':itemInfo['size'], 
                    'mtime':itemInfo['mtime']}
         # if item is folder append output item to folders list
@@ -246,9 +246,7 @@ def smartReduceMediaList(sequenceMediaList):
     splittedNameList = []
     for item in namingConventionMatched:
         # build up content for sort with regexp
-        splittedNameList.append({
-                                 'path': item['path'],
-                                 'namePrefix': cfgReCompiled.match(item['name']).group(1),
+        splittedNameList.append({'namePrefix': cfgReCompiled.match(item['name']).group(1),
                                  'nameIndex': cfgReCompiled.match(item['name']).group(2),
                                  'nameExtention': cfgReCompiled.match(item['name']).group(3),
                                  'size':item['size'],
@@ -265,14 +263,12 @@ def smartReduceMediaList(sequenceMediaList):
         # 1st iteration
         if lastToCompare == None:
             # remember 1st for follow comparison
-            lastToCompare = { 
-                             'namePrefix': splittedNameItem['namePrefix'],
+            lastToCompare = {'namePrefix': splittedNameItem['namePrefix'],
                              'nameIndex': splittedNameItem['nameIndex'],
                              'nameExtention': splittedNameItem['nameExtention'],
                              }
             # store 1st element content
-            collectedSequences.append( {
-                                        'namePrefix': splittedNameItem['namePrefix'],
+            collectedSequences.append( {'namePrefix': splittedNameItem['namePrefix'],
                                         'nameIndexStart': splittedNameItem['nameIndex'],
                                         'nameIndexFinish': splittedNameItem['nameIndex'],
                                         'nameExtention': splittedNameItem['nameExtention'],
@@ -298,8 +294,7 @@ def smartReduceMediaList(sequenceMediaList):
             # re-store content to last record
             collectedSequences[len(collectedSequences) - 1] = lastRecord
             # refresh remembered last
-            lastToCompare = { 
-                             'namePrefix': splittedNameItem['namePrefix'],
+            lastToCompare = {'namePrefix': splittedNameItem['namePrefix'],
                              'nameIndex': splittedNameItem['nameIndex'],
                              'nameExtention': splittedNameItem['nameExtention'],
                              }
@@ -307,8 +302,7 @@ def smartReduceMediaList(sequenceMediaList):
         # extention or prefix changed or not +1
         else:
             # store next element content
-            collectedSequences.append({
-                                       'namePrefix': splittedNameItem['namePrefix'],
+            collectedSequences.append({'namePrefix': splittedNameItem['namePrefix'],
                                        'nameIndexStart': splittedNameItem['nameIndex'],
                                        'nameIndexFinish': splittedNameItem['nameIndex'],
                                        'nameExtention': splittedNameItem['nameExtention'],
@@ -316,8 +310,7 @@ def smartReduceMediaList(sequenceMediaList):
                                        'mtime': splittedNameItem['mtime']
                                         })
             # refresh remembered last
-            lastToCompare = { 
-                             'namePrefix': splittedNameItem['namePrefix'],
+            lastToCompare = {'namePrefix': splittedNameItem['namePrefix'],
                              'nameIndex': splittedNameItem['nameIndex'],
                              'nameExtention': splittedNameItem['nameExtention'],
                              }
@@ -335,7 +328,7 @@ if __name__ == '__main__':
     varRawDirList = getRawDirList(cfgScanRoot)
     # exit if something wrong
     if varRawDirList == False:
-        sendMessageToQM(cfgFOLDERGONE, cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgFOLDERGONE) # current scan folder
         exit( 0 ) # raise SystemExit with the 0 exit code.
     
     # get stat info about raw directory list items
@@ -347,7 +340,7 @@ if __name__ == '__main__':
     if len(varSubDirList) > 0:
         sendMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
     else: # if empty
-        sendMessageToQM(cfgNOSUBFOLDER, cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgNOSUBFOLDER) # current scan folder
     
     # filter file-type ('.mov', '.r3d' etc) media
     varFileMediaList = filter(isFileMedia, varFileList)
@@ -356,7 +349,7 @@ if __name__ == '__main__':
     if len(varFileMediaList) > 0:
         sendMessageToQM(cfgFOUNDFILE, varFileMediaList) # file-based media files list
     else: # if empty
-        sendMessageToQM(cfgNOFILE, cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgNOFILE) # current scan folder
     
     # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
     varSequenceMediaList = filter(isSequenceMedia, varFileList)
@@ -368,5 +361,5 @@ if __name__ == '__main__':
     if len(varReducedSequenceMediaList) > 0:
         sendMessageToQM(cfgFOUNDSEQUENCE, varReducedSequenceMediaList) # sequence-based media files list
     else: # if empty 
-        sendMessageToQM(cfgNOSEQUENCE, cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgNOSEQUENCE) # current scan folder
     pass
