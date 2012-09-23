@@ -80,12 +80,14 @@ def parseArgs(): # parse command line arguments
         metavar = 'FOLDERPATH', 
         help = 'folder path to scan, "." by default' 
         )
-    parser.add_argument( 
+    parser.add_argument(
         '-l', '--log',
-        default = '.log',
+        nargs='?',
+        default = 'INFO',
         dest = 'logLevel',
         metavar = 'INFO',
-        help = 'set valid logging level (i.e. INFO)' 
+        help = 'set valid logging level, valid:\
+            INFO (default), WARNING, DEBUG' 
         )
     parser.add_argument( 
         '-f', '--file',
@@ -105,7 +107,8 @@ def parseArgs(): # parse command line arguments
 def configLogging():
     global cfgLoglevel, cfgLogfile
     #get logging level
-    logLevelNumeric = getattr(logging, cfgLoglevel.upper(), None)
+    cfgLoglevel = cfgLoglevel or 'INFO' # set to default 'INFO' if None
+    logLevelNumeric = getattr(logging, cfgLoglevel.upper())
     if isinstance(logLevelNumeric, int): # if logging level is valid
         # set logging level and format
         if cfgLogfile: # if not empty
