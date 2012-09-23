@@ -10,7 +10,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 '''
-    ...come pika.log
+    ...pika.log
 '''
 
 import time
@@ -25,6 +25,15 @@ cfgRabbitExchange = ''
 # cfgRabbitInRoutingKey = 'scanResult_queue'
 cfgRabbitOutQueue = 'scanResult_queue'
 cfgRabbitOutRoutingKey = 'scanResult_queue'
+
+# status messages
+cfgFOLDERGONE = 'folderGone'
+cfgFOUNDSUBFOLDER = 'foundSubfolder'
+cfgNOSUBFOLDER = 'noSubfolder'
+cfgFOUNDFILE = 'foundFile'
+cfgNOFILE = 'noFile'   
+cfgFOUNDSEQUENCE = 'foundSequence'
+cfgNOSEQUENCE = 'noSequence'
 
 def sendMessageToQM(message, content = None): # send message to MQ server
     # create RabbitMQ connection
@@ -57,6 +66,12 @@ def sendMessageToQM(message, content = None): # send message to MQ server
                     properties = publishproperties
                     )        
         # logging output
+        pika.log.info(
+                " routing_key >>> %s\ndata >>> %r",
+                cfgRabbitOutRoutingKey,
+                data
+                )
+    
         # logging.info('send to MQ: %s | %s', message, content)
         connection.close()
     pass
@@ -72,7 +87,7 @@ fakeData = [{'path': 'D:\\dev.Git\\pyAssetManagement',
              'mtime': 1347149587.28125, 'name': 'test1', 'size': 0L},
             {'path': 'D:\\dev.Git\\pyAssetManagement', 
              'mtime': 1347388255.8125, 'name': 'test2', 'size': 0L}]
-fakeMessage = 'Subfolders found'
+fakeMessage = cfgFOUNDSUBFOLDER
 '''
 INFO | 2012-09-22 22:06:55,121 | send to MQ: Subfolders found | [{'path': 'D:\\dev.Git\\pyAssetManagement', 'mtime': 134
 8263628.8125, 'name': '.git', 'size': 0L}, {'path': 'D:\\dev.Git\\pyAssetManagement', 'mtime': 1346000334.859375, 'name'
