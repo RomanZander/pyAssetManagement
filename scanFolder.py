@@ -43,6 +43,15 @@ cfgRabbitRoutingKey = 'scanResult_queue'
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
 cfgSequenceMediaExt = '.dpx', '.tif', '.tiff', '.j2c', '.jpg', '.png'
 
+# status messages
+cfgFOLDERGONE = 'folderGone'
+cfgFOUNDSUBFOLDER = 'foundSubfolder'
+cfgNOSUBFOLDER = 'noSubfolder'
+cfgFOUNDFILE = 'foundFile'
+cfgNOFILE = 'noFile'   
+cfgFOUNDSEQUENCE = 'foundSequence'
+cfgNOSEQUENCE = 'noSequence'
+
 # set and compile regExp 
 cfgRePattern = '^(.*\D)?(\d+)(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
 cfgReCompiled = re.compile(cfgRePattern, re.I) 
@@ -326,7 +335,7 @@ if __name__ == '__main__':
     varRawDirList = getRawDirList(cfgScanRoot)
     # exit if something wrong
     if varRawDirList == False:
-        sendMessageToQM('Ooops! Folder is gone', cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgFOLDERGONE, cfgScanRoot) # current scan folder
         exit( 0 ) # raise SystemExit with the 0 exit code.
     
     # get stat info about raw directory list items
@@ -336,18 +345,18 @@ if __name__ == '__main__':
     
     # push SUBFOLDERS info message to MQ, if any
     if len(varSubDirList) > 0:
-        sendMessageToQM('Subfolders found', varSubDirList) # subfolders list
+        sendMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
     else: # if empty
-        sendMessageToQM('NO Subfolders found', cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgNOSUBFOLDER, cfgScanRoot) # current scan folder
     
     # filter file-type ('.mov', '.r3d' etc) media
     varFileMediaList = filter(isFileMedia, varFileList)
     
     # push FILE-MEDIA info message to MQ, if any
     if len(varFileMediaList) > 0:
-        sendMessageToQM('File-media found', varFileMediaList) # file-based media files list
+        sendMessageToQM(cfgFOUNDFILE, varFileMediaList) # file-based media files list
     else: # if empty
-        sendMessageToQM('NO File-media found', cfgScanRoot) # current scan folder
+        sendMessageToQM(cfgNOFILE, cfgScanRoot) # current scan folder
     
     # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
     varSequenceMediaList = filter(isSequenceMedia, varFileList)
@@ -357,9 +366,7 @@ if __name__ == '__main__':
     
     # push SEQUENCE-MEDIA info message to MQ, if any
     if len(varReducedSequenceMediaList) > 0:
-        sendMessageToQM('Sequence-media found', varReducedSequenceMediaList) # sequence-based media files list
+        sendMessageToQM(cfgFOUNDSEQUENCE, varReducedSequenceMediaList) # sequence-based media files list
     else: # if empty 
-        sendMessageToQM('NO Sequence-media found', cfgScanRoot) # current scan folder
-    
-
+        sendMessageToQM(cfgNOSEQUENCE, cfgScanRoot) # current scan folder
     pass
