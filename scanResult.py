@@ -67,14 +67,17 @@ def inCallback(channel, method_frame, header_frame, body):
     channel.basic_ack(delivery_tag = method_frame.delivery_tag)
     pass
 
-def dispatchIn(data): # process inbound message
+def dispatchIn(MQbody): # process inbound message
     ###
     print " [.] Inbound message:"
-    ###
     
-    msgMessage = data['msgMessage']
+    msgMessage = MQbody['msgMessage']
     if msgMessage == cfgFOUNDFILE:
+        ###
         print " [+] cfgFOUNDFILE", msgMessage
+        
+        
+        
     else:
         print " [?] some else"
     
