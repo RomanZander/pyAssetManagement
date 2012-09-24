@@ -3,7 +3,7 @@
 -- Server version:               5.5.27 - MySQL Community Server (GPL)
 -- Server OS:                    Win32
 -- HeidiSQL version:             7.0.0.4053
--- Date/time:                    2012-09-22 03:50:03
+-- Date/time:                    2012-09-23 03:40:13
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -21,12 +21,15 @@ DROP TABLE IF EXISTS `media`;
 CREATE TABLE IF NOT EXISTS `media` (
   `path` text COMMENT 'media location path',
   `name` text NOT NULL COMMENT 'media name representation',
+  `type` enum('File','Sequence') DEFAULT NULL,
   `size` double unsigned DEFAULT NULL COMMENT 'media size in bytes',
   `mtime` float unsigned DEFAULT NULL COMMENT 'media modification time',
   `thumb` mediumblob COMMENT 'media thumbnail (PNG embedded in BLOB)',
   `comment` text COMMENT 'media user comment (text)',
-  `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'record update timestamp',
-  UNIQUE KEY `name_UNIQUE` (`name`(150)) USING HASH
+  `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'record update timestamp',
+  UNIQUE KEY `name_UNIQUE` (`name`(255)),
+  KEY `type_KEY` (`type`),
+  KEY `path_KEY` (`path`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Data exporting was unselected.
