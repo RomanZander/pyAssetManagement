@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanFolder
 @since: 2012.08.26
-@version: 0.0.7
+@version: 0.0.8
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -16,6 +16,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.8 +mtime is integer only
     0.0.7 +folder context to message 
     0.0.6 +pickle and send to MQ
     0.0.5 +arg parsing (+logging options)
@@ -192,7 +193,7 @@ def getRawDirListInfo(RootFolder, FolderListing):
         itemInfo['name'] = item 
         itemInfo['mode'] = itemStat.st_mode
         itemInfo['size'] = itemStat.st_size
-        itemInfo['mtime'] = itemStat.st_mtime
+        itemInfo['mtime'] = int(itemStat.st_mtime) # drop out fract part
         rawDirListInfo.append(itemInfo)
     return rawDirListInfo
 
