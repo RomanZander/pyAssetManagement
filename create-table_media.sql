@@ -1,9 +1,9 @@
 -- --------------------------------------------------------
--- Host:                         127.0.0.1
--- Server version:               5.5.27 - MySQL Community Server (GPL)
--- Server OS:                    Win32
+-- Host:                         mysql
+-- Server version:               5.1.61 - Source distribution
+-- Server OS:                    redhat-linux-gnu
 -- HeidiSQL version:             7.0.0.4053
--- Date/time:                    2012-09-23 03:40:13
+-- Date/time:                    2012-09-24 18:31:57
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS `media` (
   `path` text COMMENT 'media location path',
   `name` text NOT NULL COMMENT 'media name representation',
   `type` enum('File','Sequence') DEFAULT NULL,
-  `size` double unsigned DEFAULT NULL COMMENT 'media size in bytes',
-  `mtime` float unsigned DEFAULT NULL COMMENT 'media modification time',
+  `size` bigint(20) unsigned DEFAULT NULL COMMENT 'media size in bytes',
+  `mtime` bigint(20) unsigned DEFAULT NULL COMMENT 'media modification time',
   `thumb` mediumblob COMMENT 'media thumbnail (PNG embedded in BLOB)',
   `comment` text COMMENT 'media user comment (text)',
   `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'record update timestamp',
@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS `media` (
   KEY `path_KEY` (`path`(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Data exporting was unselected.
+-- Dumping data for table test.media: ~2 rows (approximately)
+/*!40000 ALTER TABLE `media` DISABLE KEYS */;
+REPLACE INTO `media` (`path`, `name`, `type`, `size`, `mtime`, `thumb`, `comment`, `updated`) VALUES
+	('D:\\dev.Git\\pyAssetManagement\\test1', 'test-0-mediaFile.mov', 'File', 10, 1345979021, NULL, 'custom', '2012-09-24 15:42:10'),
+	('D:\\dev.Git\\pyAssetManagement\\test1', 'test-1-mediaFile.mov', 'File', 10, 1345979021, NULL, NULL, '2012-09-24 15:58:48');
+/*!40000 ALTER TABLE `media` ENABLE KEYS */;
 /*!40014 SET FOREIGN_KEY_CHECKS=1 */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
