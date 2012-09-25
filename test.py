@@ -15,7 +15,7 @@
 """
 
 #fake unpickled MQ message body
-MQbody = {'msgFolderContext': 'D:\\dev.Git\\pyAssetManagement\\test2', 
+MQbody = {'msgFolderContext': 'D:\\dev.Git\\pyAssetManagement\\test4', 
           'msgTimestamp': 1348427664.125, 'msgMessage': 'foundFile', 'msgAppID': 'scanFolder', 
           'msgPayload': [{'size': 3L, 'name': 'test-0-mediaFile.mov', 'mtime': 1345979090}, 
                          {'size': 3L, 'name': 'test-1-mediaFile.mov', 'mtime': 1345979090}, 
@@ -49,6 +49,13 @@ def connectMySQLdb():
         print "Error %d: %s" % (e.args[0], e.args[1])
         sys.exit (1)
     return connection 
+
+if MQbody['msgMessage'] == 'folderGone': # process obsolete folder
+    ###
+    print '\n [:] process obsolete folder'
+    
+    
+
 
 if MQbody['msgMessage'] == 'foundFile': # process files
 
