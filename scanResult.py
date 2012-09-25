@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.6a
+@version: 0.0.6
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -22,6 +22,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.6 +prosess noSubfolder, fix folderGone 
     0.0.5 +process folderGone in DB 
     0.0.4 +process foundFile in DB 
     0.0.3 +process dipatcher
@@ -93,7 +94,7 @@ def inCallback(channel, method_frame, header_frame, body):
 
 def dispatchIn(MQbody): # process inbound message
     ###
-    print " [.] Inbound message:"
+    print " [*] Inbound message:"
     if MQbody['msgMessage'] == cfgFOLDERGONE:
         # call message processor for obsolete folder
         processFoldelGone(MQbody)
@@ -116,63 +117,68 @@ def dispatchIn(MQbody): # process inbound message
     
     elif MQbody['msgMessage'] == cfgFOUNDSUBFOLDER:
         # call message processor for subfolders
-        ###
-        print ' [#] processFoundSubfolder(MQbody)'
-    
+        processFoundSubfolder(MQbody)
     elif MQbody['msgMessage'] == cfgNOSUBFOLDER:
         # call message processor for obsolete subfolders
-        ###
-        print ' [#] processNoSubfolder(MQbody)'
+        processNoSubfolder(MQbody)
     
     else:
         ###
-        print " [?] some else", MQbody['msgMessage']
+        print " [?] something else", MQbody['msgMessage']
         print " [.] Processing inbound message..."
         time.sleep(1)
     ###
     print " [x] Done\n"
+def processFoundSubfolder(MQbody):
+    ###
+    print " [#] Processing foundSubfolder message..."
     
 def processNoSubfolder(MQbody):
     ###
     print " [:] Processing noSubfolder message..."
     msgFolderContext = MQbody['msgFolderContext']
-    ### print " [#] msgFolderContext:", msgFolderContext
+    subfoldersMask = msgFolderContext.replace('\\','\\\\') + '\\\\%' 
+    ### print " [#] msgFolderContext: {!r}".format(msgFolderContext)
+    ### print " [#] subfoldersMask: {!r}".format(subfoldersMask)
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
     # create and fill up SQL query
     deleteSql = '''
     DELETE FROM `{0!s}`.`media` 
-    WHERE `media`.`path` = {1!r}; # TODO: backslashes?
-    '''
+    WHERE 
+        `media`.`path` LIKE {1!r};    # TODO: backslashes?
+    ''' # subfolders only, i.e. '\\path\\to' vs '\\\\path\\\\to\\\\%'
     deleteSql = deleteSql.format(cfgMySQLdb, # table, 
-                                 msgFolderContext) # path
-    ###
-    print deleteSql
+                                 subfoldersMask) # subfolder mask    
+    ### print deleteSql
     print ' [-] deleteSql'
-    # cursor.execute(deleteSql)
+    cursor.execute(deleteSql)
     cursor.close()
     # close last cursor, commit and disconnect from server
     conn.commit()
     conn.close()
     
-
 def processFoldelGone(MQbody):
-
     ###
     print " [:] Processing folderGone message..."
     msgFolderContext = MQbody['msgFolderContext']
-    ### print " [#] msgFolderContext:", msgFolderContext
+    subfoldersMask = msgFolderContext.replace('\\','\\\\') + '\\\\%'
+    ### print " [#] msgFolderContext: {!r}".format(msgFolderContext)
+    ### print " [#] subfoldersMask: {!r}".format(subfoldersMask)
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
     # create and fill up SQL query
     deleteSql = '''
     DELETE FROM `{0!s}`.`media` 
-    WHERE `media`.`path` = {1!r}; # TODO: backslashes?
-    '''
+    WHERE 
+        (`media`.`path` = {1!r}) OR # TODO: backslashes?
+        (`media`.`path` LIKE {2!r}); # TODO: backslashes?
+    ''' # folders and subfolders, i.e. '\\path\\to' or '\\\\path\\\\to\\\\%'
     deleteSql = deleteSql.format(cfgMySQLdb, # table, 
-                                 msgFolderContext) # path
+                                 msgFolderContext, # path
+                                 subfoldersMask) # subfolder mask
     ### print deleteSql
     print ' [-] deleteSql'
     cursor.execute(deleteSql)
@@ -246,6 +252,8 @@ def processFoundFile(MQbody):
     # collect obsolete from DBdata with MQdataNamesList
     obsoleteDBdata = [dbRecord for dbRecord in DBdata if 
                       (dbRecord['name'] not in namelistMQdata)]  
+    ### print '\n [+] newbornMQdata:\n {!r}'.format(newbornMQdata)
+    ### print '\n [-] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
     # update/insert/delete queries here:
     for newbornRecord in newbornMQdata:
         cursor = conn.cursor()
@@ -286,8 +294,6 @@ def processFoundFile(MQbody):
     # close last cursor, commit and disconnect from server
     conn.commit()
     conn.close()
-    ### print '\n [+] newbornMQdata:\n {!r}'.format(newbornMQdata)
-    ### print '\n [-] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
 
 if __name__ == '__main__':
     # create RabbitMQ connection
