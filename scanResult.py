@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.3
+@version: 0.0.4
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -20,15 +20,18 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.4 +process foundFile in DB 
     0.0.3 +process dipatcher
     0.0.3a + rabbitmq host
     0.0.2 +inbound processor
     0.0.1 +Initial commit
 '''
+import sys
 import logging
 import time
 import pika
 import cPickle
+import MySQLdb
 
 # config for RabbitMQ
 cfgRabbitAppID = 'scanResult' # script identificator
@@ -38,6 +41,11 @@ cfgRabbitInQueue = 'scanResult_queue'
 cfgRabbitInRoutingKey = 'scanResult_queue'
 cfgRabbitOutQueue = 'scanFolder_queue'
 cfgRabbitOutRoutingKey = 'scanFolder_queue'
+# config for MySQL
+cfgMySQLhost = 'mysql'
+cfgMySQLuser = 'root'
+cfgMySQLpasswd = 'root'
+cfgMySQLdb = 'test'
 
 # status messages
 cfgFOLDERGONE = 'folderGone'
@@ -51,6 +59,19 @@ cfgNOSEQUENCE = 'noSequence'
 # set pika log level
 pika.log.setup(pika.log.INFO)
 #pika.log.setup(pika.log.ERROR)
+
+def connectMySQLdb():
+    # Open database connection
+    try:
+        connection = MySQLdb.connect(cfgMySQLhost, 
+                               cfgMySQLuser, 
+                               cfgMySQLpasswd,
+                               cfgMySQLdb)
+    except MySQLdb.Error, e:
+        ### TODO: log connection error
+        print "Error %d: %s" % (e.args[0], e.args[1])
+        sys.exit (1)
+    return connection
 
 def inCallback(channel, method_frame, header_frame, body):
     # unpickle inbound
@@ -70,23 +91,99 @@ def inCallback(channel, method_frame, header_frame, body):
 def dispatchIn(MQbody): # process inbound message
     ###
     print " [.] Inbound message:"
-    
-    msgMessage = MQbody['msgMessage']
-    if msgMessage == cfgFOUNDFILE:
-        ###
-        print " [+] cfgFOUNDFILE", msgMessage
-        
-        
-        
+    if MQbody['msgMessage'] == cfgFOUNDFILE:
+        # call message processor
+        processFoundFile(MQbody)
     else:
-        print " [?] some else"
-    
+        ###
+        print " [?] some else", MQbody['msgMessage']
+        print " [.] Processing inbound message..."
+        time.sleep(3)
     ###
-    print " [.] Processing inbound message..."
-    time.sleep(3)
     print " [x] Done\n"
+
+def processFoundFile(MQbody):
     ###
-    pass
+    print " [:] Processing foundFile message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    # payload from MQ message body
+    MQdata =  MQbody['msgPayload']
+    # Open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create and fill up SQL query
+    selectSql = '''
+    SELECT `name`, `size`, `mtime` 
+    FROM `{0!s}`.`media`
+    WHERE  (`type` = 'File') AND (`path` = {1!r}); # TODO: backslashes?
+    '''
+    selectSql = selectSql.format(cfgMySQLdb, # table, path
+                                 msgFolderContext) 
+    ### print selectSql
+    print ' [?] selectSql'
+    # execute SQL query and fetch all results
+    cursor.execute(selectSql)
+    rows = cursor.fetchall()
+    ### print "Rows: {!r}\nrows content: {!r}\n".format(cursor.rowcount, rows)
+    cursor.close()
+    # parse rows to data list
+    DBdata =[] # list for data dictionary from db
+    for row in rows:
+        DBdata.append({'name': row[0],
+                       'size': row[1],
+                       'mtime': int(row[2]) # convert to integer
+                       })
+    # newborn/obsolete logic here:
+    # filter MQdata from full duplicates with DBdata 
+    newbornMQdata = [mqRecord for mqRecord in MQdata if 
+                     (mqRecord not in DBdata)]
+    # collect namelist from MQdata
+    namelistMQdata = [mqRecord['name'] for mqRecord in MQdata] 
+    # collect obsolete from DBdata with MQdataNamesList
+    obsoleteDBdata = [dbRecord for dbRecord in DBdata if 
+                      (dbRecord['name'] not in namelistMQdata)]  
+    # update/insert/delete queries here:
+    for newbornRecord in newbornMQdata:
+        cursor = conn.cursor()
+        updateSql = '''
+        INSERT INTO `{0!s}`.`media` 
+            (`path`, `name`, `type`, `size`, `mtime`) 
+        VALUES 
+            ({1!r}, {2!r}, 'File', {3!s}, {4!s}) 
+        ON DUPLICATE KEY UPDATE 
+            `size` = VALUES(`size`), 
+            `mtime` = VALUES(`mtime`),
+            `updated` = NOW();
+        '''
+        updateSql = updateSql.format(cfgMySQLdb, # table 0,
+                                     msgFolderContext, # path 1
+                                     newbornRecord['name'], # name 2,
+                                     newbornRecord['size'], # size 3,
+                                     newbornRecord['mtime']) # mtime 4, 
+        ### print updateSql
+        print ' [^] updateSql'
+        cursor.execute(updateSql)
+        cursor.close()
+    # delete queries here:
+    for obsoleteRecord in obsoleteDBdata:
+        cursor = conn.cursor()
+        deleteSql = '''
+        DELETE FROM `{0!s}`.`media` 
+        WHERE (`media`.`name` = '{1!s}') 
+            AND (`media`.`path` = {2!r}); # TODO: backslashes?
+        '''
+        deleteSql = deleteSql.format(cfgMySQLdb, # table, 
+                                     obsoleteRecord['name'], # name, 
+                                     msgFolderContext) # path
+        ### print deleteSql
+        print ' [-] deleteSql'
+        cursor.execute(deleteSql)
+        cursor.close()
+    # close last cursor, commit and disconnect from server
+    conn.commit()
+    conn.close()
+    ### print '\n [+] newbornMQdata:\n {!r}'.format(newbornMQdata)
+    ### print '\n [-] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
 
 if __name__ == '__main__':
     # create RabbitMQ connection
