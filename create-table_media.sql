@@ -1,9 +1,9 @@
 -- --------------------------------------------------------
--- Host:                         127.0.0.1
--- Server version:               5.5.27 - MySQL Community Server (GPL)
--- Server OS:                    Win32
+-- Host:                         mysql
+-- Server version:               5.1.61 - Source distribution
+-- Server OS:                    redhat-linux-gnu
 -- HeidiSQL version:             7.0.0.4053
--- Date/time:                    2012-09-25 01:45:41
+-- Date/time:                    2012-09-25 13:19:44
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -31,15 +31,19 @@ CREATE TABLE IF NOT EXISTS `media` (
   KEY `type_KEY` (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table test.media: ~6 rows (approximately)
+-- Dumping data for table test.media: ~10 rows (approximately)
 /*!40000 ALTER TABLE `media` DISABLE KEYS */;
 INSERT INTO `media` (`path`, `name`, `type`, `size`, `mtime`, `thumb`, `comment`, `updated`) VALUES
 	('D:\\dev.Git\\pyAssetManagement\\test1', 'test-0-mediaFile.mov', 'File', 128, 1345979021, NULL, NULL, '2012-09-25 01:25:19'),
 	('D:\\dev.Git\\pyAssetManagement\\test1', 'test-3-mediaFile.mov', 'File', 124, 1345979022, NULL, NULL, '2012-09-25 01:25:19'),
-	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-13-mediaFile.mov', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 01:33:45'),
+	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-13-mediaFile.mov', 'File', 5, 1345979090, NULL, NULL, '2012-09-25 13:07:55'),
 	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-1-mediaFile.mov', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 01:44:59'),
-	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-2-mediaFile.MOV', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 01:44:59'),
-	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-0-mediaFile.mov', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 01:44:20');
+	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-0-mediaFile.mov', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 01:44:20'),
+	('D:\\dev.Git\\pyAssetManagement\\test2', 'test-12-mediaFile.MOV', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 13:07:55'),
+	('D:\\dev.Git\\pyAssetManagement\\test4', 'test-0-mediaFile.mov', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 13:16:13'),
+	('D:\\dev.Git\\pyAssetManagement\\test4', 'test-1-mediaFile.mov', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 13:16:13'),
+	('D:\\dev.Git\\pyAssetManagement\\test4', 'test-12-mediaFile.MOV', 'File', 3, 1345979090, NULL, NULL, '2012-09-25 13:16:13'),
+	('D:\\dev.Git\\pyAssetManagement\\test4', 'test-13-mediaFile.mov', 'File', 5, 1345979090, NULL, NULL, '2012-09-25 13:16:13');
 /*!40000 ALTER TABLE `media` ENABLE KEYS */;
 /*!40014 SET FOREIGN_KEY_CHECKS=1 */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
