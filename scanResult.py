@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.4
+@version: 0.0.6a
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -12,6 +12,8 @@
 """
     ...send new subfolder tasks to MQ
     ...SQL|data comparing logic
+    
+    check connection
     ...process unsuccess connection to RabbitMQ
     ...process unsuccess connection to In MQ channel
     ...process unsuccess connection to Out MQ channel
@@ -20,6 +22,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.5 +process folderGone in DB 
     0.0.4 +process foundFile in DB 
     0.0.3 +process dipatcher
     0.0.3a + rabbitmq host
@@ -91,16 +94,117 @@ def inCallback(channel, method_frame, header_frame, body):
 def dispatchIn(MQbody): # process inbound message
     ###
     print " [.] Inbound message:"
-    if MQbody['msgMessage'] == cfgFOUNDFILE:
-        # call message processor
+    if MQbody['msgMessage'] == cfgFOLDERGONE:
+        # call message processor for obsolete folder
+        processFoldelGone(MQbody)
+    elif MQbody['msgMessage'] == cfgFOUNDFILE:
+        # call message processor for files
         processFoundFile(MQbody)
+    elif MQbody['msgMessage'] == cfgNOFILE:
+        # call message processor for obsolete files
+        processNoFile(MQbody)
+        
+    elif MQbody['msgMessage'] == cfgFOUNDSEQUENCE:
+        # call message processor for sequences
+        ###
+        print ' [#] processFoundSequence(MQbody)'
+        
+    elif MQbody['msgMessage'] == cfgNOSEQUENCE:
+        # call message processor for obsolete sequences
+        ###
+        print ' [#] processNoSequence(MQbody)'
+    
+    elif MQbody['msgMessage'] == cfgFOUNDSUBFOLDER:
+        # call message processor for subfolders
+        ###
+        print ' [#] processFoundSubfolder(MQbody)'
+    
+    elif MQbody['msgMessage'] == cfgNOSUBFOLDER:
+        # call message processor for obsolete subfolders
+        ###
+        print ' [#] processNoSubfolder(MQbody)'
+    
     else:
         ###
         print " [?] some else", MQbody['msgMessage']
         print " [.] Processing inbound message..."
-        time.sleep(3)
+        time.sleep(1)
     ###
     print " [x] Done\n"
+    
+def processNoSubfolder(MQbody):
+    ###
+    print " [:] Processing noSubfolder message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    ### print " [#] msgFolderContext:", msgFolderContext
+    # Open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create and fill up SQL query
+    deleteSql = '''
+    DELETE FROM `{0!s}`.`media` 
+    WHERE `media`.`path` = {1!r}; # TODO: backslashes?
+    '''
+    deleteSql = deleteSql.format(cfgMySQLdb, # table, 
+                                 msgFolderContext) # path
+    ###
+    print deleteSql
+    print ' [-] deleteSql'
+    # cursor.execute(deleteSql)
+    cursor.close()
+    # close last cursor, commit and disconnect from server
+    conn.commit()
+    conn.close()
+    
+
+def processFoldelGone(MQbody):
+
+    ###
+    print " [:] Processing folderGone message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    ### print " [#] msgFolderContext:", msgFolderContext
+    # Open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create and fill up SQL query
+    deleteSql = '''
+    DELETE FROM `{0!s}`.`media` 
+    WHERE `media`.`path` = {1!r}; # TODO: backslashes?
+    '''
+    deleteSql = deleteSql.format(cfgMySQLdb, # table, 
+                                 msgFolderContext) # path
+    ### print deleteSql
+    print ' [-] deleteSql'
+    cursor.execute(deleteSql)
+    cursor.close()
+    # close last cursor, commit and disconnect from server
+    conn.commit()
+    conn.close()
+
+def processNoFile(MQbody):
+    ###
+    print " [:] Processing noFile message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    ### print " [#] msgFolderContext:", msgFolderContext
+    # Open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create and fill up SQL query
+    deleteSql = '''
+    DELETE FROM `{0!s}`.`media` 
+    WHERE 
+        (`media`.`path` = {1!r}) AND # TODO: backslashes?
+        (`media`.`type` = 'File'); 
+    '''
+    deleteSql = deleteSql.format(cfgMySQLdb, # table, 
+                                 msgFolderContext) # path
+    ### print deleteSql
+    print ' [-] deleteSql'
+    cursor.execute(deleteSql)
+    cursor.close()
+    # close last cursor, commit and disconnect from server
+    conn.commit()
+    conn.close()
 
 def processFoundFile(MQbody):
     ###
