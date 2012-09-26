@@ -129,6 +129,7 @@ def dispatchIn(MQbody): # process inbound message
         time.sleep(1)
     ###
     print " [x] Done\n"
+    
 def processFoundSubfolder(MQbody):
     ###
     print " [#] Processing foundSubfolder message..."
