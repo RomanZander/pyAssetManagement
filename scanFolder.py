@@ -37,9 +37,13 @@ import cPickle
 # config for RabbitMQ
 cfgRabbitAppID = 'scanFolder' # script identificator
 cfgRabbitHost = 'rabbitmq' # add record to hosts on local dev
-cfgRabbitExchange = ''
-cfgRabbitQueue = 'scanResult_queue'
-cfgRabbitRoutingKey = 'scanResult_queue'
+cfgRabbitOutExchange = ''
+cfgRabbitOutQueue = 'scanResult_queue' # queue with scan results
+cfgRabbitOutRoutingKey = 'scanResult_queue'
+cfgRabbitInExchange = ''
+cfgRabbitInQueue = 'scanFolder_queue' # queue with scan tasks
+cfgRabbitInRoutingKey = 'scanFolder_queue'
+
 
 # tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
@@ -140,7 +144,7 @@ def configLogging():
         ### logging.basicConfig(level=logLevelNumeric, format='===\n%(levelname)s | %(asctime)s | %(message)s')
     pass
 
-def sendMessageToQM(message, content = None): # send message to MQ server
+def sendOutMessageToQM(message, content = None): # send out message to MQ server
     # create RabbitMQ connection
     parameters = pika.ConnectionParameters(host = cfgRabbitHost)
     connection = pika.BlockingConnection(parameters)
@@ -159,21 +163,59 @@ def sendMessageToQM(message, content = None): # send message to MQ server
         dataPickled = cPickle.dumps(data, -1)
         # MQ code here
         channel.queue_declare(
-                    queue = cfgRabbitQueue,
+                    queue = cfgRabbitOutQueue,
                     durable = True
                     )
         publishproperties = pika.BasicProperties(
                     delivery_mode = 2 # make message persistent 
                     ) 
         channel.basic_publish(
-                    exchange = cfgRabbitExchange,
-                    routing_key = cfgRabbitRoutingKey,
+                    exchange = cfgRabbitOutExchange,
+                    routing_key = cfgRabbitOutRoutingKey,
                     body = dataPickled, # sent data
                     properties = publishproperties
                     )        
         # logging output
-        logging.info('send to MQ: %s | %s', message, content)
+        logging.info('send to Out MQ: %s | %s', message, content)
         connection.close()
+    pass
+
+def sendInMessageToQM(message, content = None): # send in message to MQ server
+    # create RabbitMQ connection
+    parameters = pika.ConnectionParameters(host = cfgRabbitHost)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    if connection.is_open:
+        # get current timestamp
+        timestamp = time.time()
+        # An agreement about message:
+        data = {'msgTimestamp': timestamp,
+                'msgAppID': cfgRabbitAppID,
+                'msgMessage': message,
+                # TODO: new scanroots with new tasks?
+                'msgFolderContext': cfgScanRoot, 
+                'msgPayload': content
+                }
+        # conserve data
+        dataPickled = cPickle.dumps(data, -1)
+        # MQ code here
+        channel.queue_declare(
+                    queue = cfgRabbitInQueue,
+                    durable = True
+                    )
+        publishproperties = pika.BasicProperties(
+                    delivery_mode = 2 # make message persistent 
+                    ) 
+        channel.basic_publish(
+                    exchange = cfgRabbitInExchange,
+                    routing_key = cfgRabbitInRoutingKey,
+                    body = dataPickled, # sent data
+                    properties = publishproperties
+                    )        
+        # logging output
+        logging.info('send to In MQ: %s | %s', message, content)
+        connection.close()
+    ### here
     pass
 
 def getRawDirList(RootFolder): # let's read raw directory listing
@@ -323,13 +365,13 @@ if __name__ == '__main__':
     configLogging() # logging setup 
     
     # logging output
-    logging.info('cfgScanRoot: %s', cfgScanRoot) 
+    logging.info('cfgScanRoot: %s\n', cfgScanRoot) 
     
     # get raw directory list 
     varRawDirList = getRawDirList(cfgScanRoot)
-    # exit if something wrong
+    # push FOLDERGONE and exit if something wrong with getRawDirList
     if varRawDirList == False:
-        sendMessageToQM(cfgFOLDERGONE) # current scan folder
+        sendOutMessageToQM(cfgFOLDERGONE) # current scan folder
         exit( 0 ) # raise SystemExit with the 0 exit code.
     
     # get stat info about raw directory list items
@@ -337,20 +379,22 @@ if __name__ == '__main__':
     # sort out collected info to subfolders / files list
     varSubDirList, varFileList = sortOutCollected(varRawDirListInfo)
     
-    # push SUBFOLDERS info message to MQ, if any
+    # push SUBFOLDERS info message to In MQ, if any
     if len(varSubDirList) > 0:
-        sendMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
+        # (reroute task to self)
+        sendInMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
     else: # if empty
-        sendMessageToQM(cfgNOSUBFOLDER) # current scan folder
+        # push NOSUBFOLDER info message to Out MQ
+        sendOutMessageToQM(cfgNOSUBFOLDER) # current scan folder to Out MQ
     
     # filter file-type ('.mov', '.r3d' etc) media
     varFileMediaList = filter(isFileMedia, varFileList)
     
-    # push FILE-MEDIA info message to MQ, if any
+    # push FILE-MEDIA info message to Out MQ, if any
     if len(varFileMediaList) > 0:
-        sendMessageToQM(cfgFOUNDFILE, varFileMediaList) # file-based media files list
+        sendOutMessageToQM(cfgFOUNDFILE, varFileMediaList) # file-based media files list
     else: # if empty
-        sendMessageToQM(cfgNOFILE) # current scan folder
+        sendOutMessageToQM(cfgNOFILE) # current scan folder
     
     # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
     varSequenceMediaList = filter(isSequenceMedia, varFileList)
@@ -358,9 +402,9 @@ if __name__ == '__main__':
     # smart reduce sequence media list
     varReducedSequenceMediaList = smartReduceMediaList(varSequenceMediaList)
     
-    # push SEQUENCE-MEDIA info message to MQ, if any
+    # push SEQUENCE-MEDIA info message to Out MQ, if any
     if len(varReducedSequenceMediaList) > 0:
-        sendMessageToQM(cfgFOUNDSEQUENCE, varReducedSequenceMediaList) # sequence-based media files list
+        sendOutMessageToQM(cfgFOUNDSEQUENCE, varReducedSequenceMediaList) # sequence-based media files list
     else: # if empty 
-        sendMessageToQM(cfgNOSEQUENCE) # current scan folder
+        sendOutMessageToQM(cfgNOSEQUENCE) # current scan folder
     pass
