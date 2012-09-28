@@ -10,7 +10,6 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    ...send new subfolder tasks to MQ
     ...SQL|data comparing logic
     
     check connection
