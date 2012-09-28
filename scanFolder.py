@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanFolder
 @since: 2012.08.26
-@version: 0.0.9a
+@version: 0.0.9b
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,13 +10,15 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    listen MQ for scan task
+    fix empty arg (= None)...
+    fix unicode
+    ...unite pika.log and logging
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
-    0.0.9a +OutMQ/InMQ 
+    0.0.9b +OutMQ/InMQ, allow empty FOLDERPATH for queue-only mode 
     0.0.8 +mtime is integer only
     0.0.7 +folder context to message 
     0.0.6 +pickle and send to MQ
@@ -38,13 +40,14 @@ import cPickle
 # config for RabbitMQ
 cfgRabbitAppID = 'scanFolder' # script identificator
 cfgRabbitHost = 'rabbitmq' # add record to hosts on local dev
-cfgRabbitOutExchange = ''
-cfgRabbitOutQueue = 'scanResult_queue' # queue with scan results
-cfgRabbitOutRoutingKey = 'scanResult_queue'
 cfgRabbitInExchange = ''
 cfgRabbitInQueue = 'scanFolder_queue' # queue with scan tasks
 cfgRabbitInRoutingKey = 'scanFolder_queue'
-
+cfgRabbitOutExchange = ''
+cfgRabbitOutQueue = 'scanResult_queue' # queue with scan results
+cfgRabbitOutRoutingKey = 'scanResult_queue'
+# sleep time (sec) before re-request new task from queue
+cfgRequestSleepTime = 0.5 
 
 # tuples with media file extentions (lower-case!)
 cfgFileMediaExt = '.mov', '.avi', '.mp4'
@@ -92,9 +95,9 @@ def parseArgs(): # parse command line arguments
     parser.add_argument( 
         'scanRoot',
         nargs = '?',
-        default = '.',
+        default = None,
         metavar = 'FOLDERPATH', 
-        help = 'folder path to scan, "." by default' 
+        help = 'folder path to scan, None by default' 
         )
     parser.add_argument(
         '-l', '--log',
@@ -115,7 +118,9 @@ def parseArgs(): # parse command line arguments
     args = parser.parse_args()    
     
     # re-set global vars
-    cfgScanRoot = os.path.realpath(args.scanRoot) # real path reconstruction
+    if args.scanRoot: 
+        # real path reconstruction
+        cfgScanRoot = os.path.realpath(args.scanRoot) 
     cfgLoglevel = args.logLevel
     cfgLogfile = args.logFile
     pass
@@ -183,7 +188,7 @@ def sendOutMessageToQM(message, content = None): # send out message to MQ server
 
 def sendInMessageToQM(message, content = None): # send in message to MQ server
     # create RabbitMQ connection
-    parameters = pika.ConnectionParameters(host = cfgRabbitHost)
+    parameters = pika.ConnectionParameters(cfgRabbitHost)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     if connection.is_open:
@@ -216,7 +221,6 @@ def sendInMessageToQM(message, content = None): # send in message to MQ server
         # logging output
         logging.info('send to In MQ: %s | %s', message, content)
         connection.close()
-    ### here
     pass
 
 def getRawDirList(RootFolder): # let's read raw directory listing
@@ -360,52 +364,116 @@ def smartReduceMediaList(sequenceMediaList):
                              }
     return collectedSequences 
 
-if __name__ == '__main__':
-    
-    parseArgs() # parse from command line
-    configLogging() # logging setup 
-    
+def processInTask(scanRoot = None):
+    global cfgScanRoot
+    cfgScanRoot = scanRoot or cfgScanRoot    
     # logging output
-    logging.info('cfgScanRoot: %s\n', cfgScanRoot) 
-    
+    logging.info(' [:] Process cfgScanRoot: %s', cfgScanRoot)
     # get raw directory list 
     varRawDirList = getRawDirList(cfgScanRoot)
     # push FOLDERGONE and exit if something wrong with getRawDirList
     if varRawDirList == False:
         sendOutMessageToQM(cfgFOLDERGONE) # current scan folder
-        exit( 0 ) # raise SystemExit with the 0 exit code.
+        #exit( 0 ) # raise SystemExit with the 0 exit code. # TODO: log?
+    else:
+        # get stat info about raw directory list items
+        varRawDirListInfo = getRawDirListInfo(cfgScanRoot, varRawDirList)
+        # sort out collected info to subfolders / files list
+        varSubDirList, varFileList = sortOutCollected(varRawDirListInfo)
+        # push SUBFOLDERS info message to In MQ, if any
+        if len(varSubDirList) > 0:
+            # (reroute task to self)
+            sendInMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
+        else: # if empty
+            # push NOSUBFOLDER info message to Out MQ
+            sendOutMessageToQM(cfgNOSUBFOLDER) # current scan folder to Out MQ
+        # filter file-type ('.mov', '.r3d' etc) media
+        varFileMediaList = filter(isFileMedia, varFileList)
+        # push FILE-MEDIA info message to Out MQ, if any
+        if len(varFileMediaList) > 0:
+            sendOutMessageToQM(cfgFOUNDFILE, varFileMediaList) # file-based media files list
+        else: # if empty
+            sendOutMessageToQM(cfgNOFILE) # current scan folder
+        # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
+        varSequenceMediaList = filter(isSequenceMedia, varFileList)
+        # smart reduce sequence media list
+        varReducedSequenceMediaList = smartReduceMediaList(varSequenceMediaList)
+        # push SEQUENCE-MEDIA info message to Out MQ, if any
+        if len(varReducedSequenceMediaList) > 0:
+            sendOutMessageToQM(cfgFOUNDSEQUENCE, varReducedSequenceMediaList) # sequence-based media files list
+        else: # if empty 
+            sendOutMessageToQM(cfgNOSEQUENCE) # current scan folder
+    # logging output
+    logging.info(' [x] Done cfgScanRoot: %s\n', cfgScanRoot) 
+    pass
+
+def requestTasksFromInQueue():
+    # logging output
+    logging.info(' [#] requestTasksFromInQueue()')
+    # connect to RabbitMQ
+    parameters = pika.ConnectionParameters(cfgRabbitHost)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    # declare the queue
+    channel.queue_declare(queue = cfgRabbitInQueue, 
+                          durable = True
+                          #exclusive = False, 
+                          #auto_delete = False
+                          )
+    channel.basic_qos(prefetch_count=1) # set qos ?
+    # init loop until disconnection stops us
+    while connection.is_open:
+        # call basic get which returns the 3 frame types
+        method_frame, header_frame, body = channel.basic_get(queue = cfgRabbitInQueue)
+        # it can be empty if the queue is empty so just disconnect
+        if method_frame.NAME == 'Basic.GetEmpty':
+            pika.log.info("Empty Basic.Get Response (Basic.GetEmpty)")
+            connection.close() # close connection
+            pika.log.info("connection.close()")
+        # if have data
+        else:
+            # unpickle inbound
+            data = cPickle.loads(body)
+            pika.log.info("Basic.GetOk %s delivery-tag %i: %r",
+                          header_frame.content_type,
+                          method_frame.delivery_tag,
+                          data)
+            ### process data here
+            logging.info(' [:] process data here:')
+            if data['msgMessage'] == cfgFOUNDSUBFOLDER:
+                logging.info(' [.] : %s', data['msgMessage'])
+                logging.info(' [.] : %r', data['msgPayload'])
+                logging.info(' [.] : %r', data['msgPayload'])
+                for inTask in data['msgPayload']:
+                    # real path reconstruction
+                    newTaskRoot =  data['msgFolderContext'] + os.sep + inTask['name']
+                    ### cfgScanRoot = os.path.realpath(args.scanRoot) 
+                    logging.info(' [*] : processInTask(%r)', newTaskRoot)
+                    processInTask(newTaskRoot)
+                    pass
+                pass
+            # Acknowledge the receipt of the data
+            channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+            # no need to pound rabbit, sleep for a while.
+            logging.info("time.sleep(%s) before re-request new task", cfgRequestSleepTime)
+            time.sleep(cfgRequestSleepTime)
+        pass
+    pika.log.info("while connection.is_open loop closed")
+    pass
+
+if __name__ == '__main__':
     
-    # get stat info about raw directory list items
-    varRawDirListInfo = getRawDirListInfo(cfgScanRoot, varRawDirList)
-    # sort out collected info to subfolders / files list
-    varSubDirList, varFileList = sortOutCollected(varRawDirListInfo)
+    parseArgs() # parse from command line
     
-    # push SUBFOLDERS info message to In MQ, if any
-    if len(varSubDirList) > 0:
-        # (reroute task to self)
-        sendInMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
-    else: # if empty
-        # push NOSUBFOLDER info message to Out MQ
-        sendOutMessageToQM(cfgNOSUBFOLDER) # current scan folder to Out MQ
+    configLogging() # logging setup 
+    # pika.log.setup(pika.log.INFO) # set pika log level
+    # logging output
+    logging.info('cfgScanRoot: %r\n', cfgScanRoot) 
     
-    # filter file-type ('.mov', '.r3d' etc) media
-    varFileMediaList = filter(isFileMedia, varFileList)
+    # do start task if set
+    if cfgScanRoot:
+        processInTask(cfgScanRoot)
+    # then request other tasks from queue
+    requestTasksFromInQueue()
     
-    # push FILE-MEDIA info message to Out MQ, if any
-    if len(varFileMediaList) > 0:
-        sendOutMessageToQM(cfgFOUNDFILE, varFileMediaList) # file-based media files list
-    else: # if empty
-        sendOutMessageToQM(cfgNOFILE) # current scan folder
-    
-    # filter sequence-type ('.dpx', '.jpg' etc with naming convention) media
-    varSequenceMediaList = filter(isSequenceMedia, varFileList)
-    
-    # smart reduce sequence media list
-    varReducedSequenceMediaList = smartReduceMediaList(varSequenceMediaList)
-    
-    # push SEQUENCE-MEDIA info message to Out MQ, if any
-    if len(varReducedSequenceMediaList) > 0:
-        sendOutMessageToQM(cfgFOUNDSEQUENCE, varReducedSequenceMediaList) # sequence-based media files list
-    else: # if empty 
-        sendOutMessageToQM(cfgNOSEQUENCE) # current scan folder
     pass
