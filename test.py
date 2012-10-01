@@ -58,7 +58,7 @@ def connectMySQLdb():
 
 cfgScanRoot = u"test1"
 
-# encode arg from console    
+# encode arg from console
 if len(sys.argv) >1:
     cfgScanRoot = unicode(sys.argv[1], cfgConsoleEnc) # encode from console
 # real path reconstruction
