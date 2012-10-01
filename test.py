@@ -58,10 +58,7 @@ def connectMySQLdb():
         sys.exit (1)
     return connection 
 
-
-###
-
-cfgScanRoot = u"test5\тест"
+cfgScanRoot = u"test1"
 
 # encode arg from console    
 if len(sys.argv) >1:
@@ -71,7 +68,10 @@ cfgScanRoot = os.path.realpath(cfgScanRoot)
 print "after:", cfgScanRoot, type(cfgScanRoot)
 
 rawDirList = os.listdir(cfgScanRoot)
-print "os.listdir: ", rawDirList
+print "os.listdir: "
+for i in rawDirList:
+    #print u"{!s} {!r}".format(i, i)
+    pass
 #for name in rawDirList:
 #    print name
 
@@ -79,30 +79,39 @@ print "os.listdir: ", rawDirList
 conn = connectMySQLdb() 
 cursor = conn.cursor()
 
-updateSql = u'''
-    INSERT INTO `{0!s}`.`media` 
+"""
+# MySQLdb.paramstyle = 
+'qmark'         Question mark style, 
+                e.g. '...WHERE name=?'
+'numeric'       Numeric, positional style, 
+                e.g. '...WHERE name=:1'
+'named'         Named style, 
+                e.g. '...WHERE name=:name'
+'format'        ANSI C printf format codes, 
+                e.g. '...WHERE name=%s'
+'pyformat'      Python extended format codes, 
+                e.g. '...WHERE name=%(name)s'
+"""
+sql = u'''
+    INSERT INTO `test`.`media` 
             (`path`, `name`, `type`, `size`, `mtime`) 
         VALUES 
-            ('{1!s}', '{2!s}', 'File', {3!s}, {4!s}) 
+            (%s, %s, 'File', %s, %s) 
         ON DUPLICATE KEY UPDATE 
             `size` = VALUES(`size`), 
             `mtime` = VALUES(`mtime`),
             `updated` = NOW();
     '''
 
-for name in range(1, 5): #rawDirList:
-    sql = updateSql.format(cfgMySQLdb, #table
-                           MySQLdb.escape_string(unicode(cfgScanRoot,'utf-8')),# path 
-                           name, # name
-                           100L, # size
-                           123456789 # mtime
-                           )
-    print sql
-    cursor.execute(sql)
+for name in rawDirList:
+    cursor.execute(sql,
+                   (#cfgMySQLdb, #table
+                    cfgScanRoot,# path
+                    name, # name
+                    100L, # size
+                    123456789 # mtime
+                    ))
     rows = cursor.fetchall()
-    print "Rows: {!r}\nrows content: {!r}\n".format(cursor.rowcount, rows)
-
-
 cursor.close()
 conn.commit()
 conn.close()
