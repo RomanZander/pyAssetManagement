@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.9a
+@version: 0.0.9b
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -176,6 +176,19 @@ def processFoundSequence(MQbody):
                        'mtime': int(row[2]) # convert to integer
                        })
     # newborn/obsolete logic here:
+    # filter MQdata from full duplicates with DBdata 
+    newbornMQdata = [mqRecord for mqRecord in MQdata if 
+                     (mqRecord not in DBdata)]
+    # collect namelist from MQdata
+    namelistMQdata = [mqRecord['name'] for mqRecord in MQdata] 
+    # collect obsolete from DBdata with MQdataNamesList
+    obsoleteDBdata = [dbRecord for dbRecord in DBdata if 
+                      (dbRecord['name'] not in namelistMQdata)]  
+    ### print '\n [+] newbornMQdata:\n {!r}'.format(newbornMQdata)
+    ### print '\n [-] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
+    # update/insert/delete queries here:
+    # NEWBORN HERE:
+    
     
     ###
     print "MQdata", MQdata
@@ -199,7 +212,7 @@ def processNoSequence(MQbody):
     '''
     # fill up and execute SQL query
     cursor.execute(deleteSql, (#cfgMySQLdb, # TODO: table, 
-                               MySQLdb.escape_string(msgFolderContext) # path
+                               msgFolderContext, # path
                                ))
     ### 
     print ' [-] deleteSql:', cursor.rowcount
@@ -281,7 +294,7 @@ def processNoFile(MQbody):
     '''
     # fill up and execute SQL query
     cursor.execute(deleteSql, (#cfgMySQLdb, # TODO: table, 
-                               MySQLdb.escape_string(msgFolderContext) # path
+                               msgFolderContext, # path
                                ))
     ### 
     print ' [-] deleteSql:', cursor.rowcount
