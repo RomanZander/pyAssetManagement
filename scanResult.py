@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.6
+@version: 0.0.8
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,8 +10,8 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
+    unicode all
     ...SQL|data comparing logic
-    
     check connection
     ...process unsuccess connection to RabbitMQ
     ...process unsuccess connection to In MQ channel
@@ -21,6 +21,8 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.8 +fix processNoSubfolder, processFoldelGone, processNoFile,
+        processFoundFile,
     0.0.6 +prosess noSubfolder, fix folderGone 
     0.0.5 +process folderGone in DB 
     0.0.4 +process foundFile in DB 
@@ -29,6 +31,7 @@
     0.0.2 +inbound processor
     0.0.1 +Initial commit
 '''
+import os
 import sys
 import logging
 import time
@@ -44,6 +47,7 @@ cfgRabbitInQueue = 'scanResult_queue'
 cfgRabbitInRoutingKey = 'scanResult_queue'
 cfgRabbitOutQueue = 'scanFolder_queue'
 cfgRabbitOutRoutingKey = 'scanFolder_queue'
+
 # config for MySQL
 cfgMySQLhost = 'mysql'
 cfgMySQLuser = 'root'
@@ -60,8 +64,7 @@ cfgFOUNDSEQUENCE = 'foundSequence'
 cfgNOSEQUENCE = 'noSequence'
 
 # set pika log level
-pika.log.setup(pika.log.INFO)
-#pika.log.setup(pika.log.ERROR)
+pika.log.setup(pika.log.INFO) #pika.log.setup(pika.log.ERROR)
 
 def connectMySQLdb():
     # Open database connection
@@ -69,9 +72,13 @@ def connectMySQLdb():
         connection = MySQLdb.connect(cfgMySQLhost, 
                                cfgMySQLuser, 
                                cfgMySQLpasswd,
-                               cfgMySQLdb)
+                               cfgMySQLdb,
+                               charset='utf8'
+                               )
+        
     except MySQLdb.Error, e:
         ### TODO: log connection error
+        ### TODO: reconnect tryout?
         print "Error %d: %s" % (e.args[0], e.args[1])
         sys.exit (1)
     return connection
@@ -137,25 +144,24 @@ def processNoSubfolder(MQbody):
     ###
     print " [:] Processing noSubfolder message..."
     msgFolderContext = MQbody['msgFolderContext']
-    subfoldersMask = msgFolderContext.replace('\\','\\\\') + '\\\\%' 
-    ### print " [#] msgFolderContext: {!r}".format(msgFolderContext)
-    ### print " [#] subfoldersMask: {!r}".format(subfoldersMask)
+    #create subfolder mask for SQL LIKE 
+    subfoldersMask = (msgFolderContext + os.sep + '%').replace('\\','\\\\')
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
-    # create and fill up SQL query
-    deleteSql = '''
-    DELETE FROM `{0!s}`.`media` 
+    # create delete SQL query
+    deleteSql = u'''
+    DELETE FROM `test`.`media` # TODO: table name?
     WHERE 
-        `media`.`path` LIKE {1!r};    # TODO: backslashes?
-    ''' # subfolders only, i.e. '\\path\\to' vs '\\\\path\\\\to\\\\%'
-    deleteSql = deleteSql.format(cfgMySQLdb, # table, 
-                                 subfoldersMask) # subfolder mask    
-    ### print deleteSql
-    print ' [-] deleteSql'
-    cursor.execute(deleteSql)
-    cursor.close()
+        `media`.`path` LIKE %s;    
+    ''' # subfolders only, i.e. '\path\to' vs '\path\to\%'
+    # fill up and execute query
+    cursor.execute(deleteSql, (#cfgMySQLdb, # TODO: table,
+                               subfoldersMask, # subfolder mask
+                               ))
+    print " [-] deleteSql:", cursor.rowcount
     # close last cursor, commit and disconnect from server
+    cursor.close()
     conn.commit()
     conn.close()
     
@@ -163,27 +169,27 @@ def processFoldelGone(MQbody):
     ###
     print " [:] Processing folderGone message..."
     msgFolderContext = MQbody['msgFolderContext']
-    subfoldersMask = msgFolderContext.replace('\\','\\\\') + '\\\\%'
-    ### print " [#] msgFolderContext: {!r}".format(msgFolderContext)
-    ### print " [#] subfoldersMask: {!r}".format(subfoldersMask)
+    #create subfolder mask for SQL LIKE 
+    subfoldersMask = (msgFolderContext + os.sep + '%').replace('\\','\\\\')
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
-    # create and fill up SQL query
-    deleteSql = '''
-    DELETE FROM `{0!s}`.`media` 
+    # create delete SQL query
+    deleteSql = u'''
+    DELETE FROM `test`.`media` # TODO: table name?
     WHERE 
-        (`media`.`path` = {1!r}) OR # TODO: backslashes?
-        (`media`.`path` LIKE {2!r}); # TODO: backslashes?
+        (`media`.`path` = %s) OR
+        (`media`.`path` LIKE %s);
     ''' # folders and subfolders, i.e. '\\path\\to' or '\\\\path\\\\to\\\\%'
-    deleteSql = deleteSql.format(cfgMySQLdb, # table, 
-                                 msgFolderContext, # path
-                                 subfoldersMask) # subfolder mask
-    ### print deleteSql
-    print ' [-] deleteSql'
-    cursor.execute(deleteSql)
-    cursor.close()
+    # fill up and execute SQL query
+    cursor.execute(deleteSql, (#cfgMySQLdb, # TODO: table,
+                               msgFolderContext, # path
+                               subfoldersMask # subfolder mask
+                               ))
+    ### 
+    print ' [-] deleteSql:', cursor.rowcount
     # close last cursor, commit and disconnect from server
+    cursor.close()
     conn.commit()
     conn.close()
 
@@ -191,24 +197,24 @@ def processNoFile(MQbody):
     ###
     print " [:] Processing noFile message..."
     msgFolderContext = MQbody['msgFolderContext']
-    ### print " [#] msgFolderContext:", msgFolderContext
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
-    # create and fill up SQL query
-    deleteSql = '''
-    DELETE FROM `{0!s}`.`media` 
+    # create delete SQL query
+    deleteSql = u'''
+    DELETE FROM `test`.`media` # TODO: table name?
     WHERE 
-        (`media`.`path` = {1!r}) AND # TODO: backslashes?
+        (`media`.`path` = %s) AND
         (`media`.`type` = 'File'); 
     '''
-    deleteSql = deleteSql.format(cfgMySQLdb, # table, 
-                                 msgFolderContext) # path
-    ### print deleteSql
-    print ' [-] deleteSql'
-    cursor.execute(deleteSql)
-    cursor.close()
+    # fill up and execute SQL query
+    cursor.execute(deleteSql, (#cfgMySQLdb, # TODO: table, 
+                               MySQLdb.escape_string(msgFolderContext) # path
+                               ))
+    ### 
+    print ' [-] deleteSql:', cursor.rowcount
     # close last cursor, commit and disconnect from server
+    cursor.close()
     conn.commit()
     conn.close()
 
@@ -221,20 +227,18 @@ def processFoundFile(MQbody):
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
-    # create and fill up SQL query
-    selectSql = '''
+    # create select SQL query
+    selectSql = u'''
     SELECT `name`, `size`, `mtime` 
-    FROM `{0!s}`.`media`
-    WHERE  (`type` = 'File') AND (`path` = {1!r}); # TODO: backslashes?
-    '''
-    selectSql = selectSql.format(cfgMySQLdb, # table, path
-                                 msgFolderContext) 
-    ### print selectSql
-    print ' [?] selectSql'
-    # execute SQL query and fetch all results
-    cursor.execute(selectSql)
+    FROM `test`.`media` # TODO: table name?
+    WHERE  (`type` = 'File') AND (`path` = %s);
+    ''' 
+    # fill up and execute SQL query
+    cursor.execute(selectSql, (msgFolderContext, ))
+    ### 
+    print ' [?] selectSql:', cursor.rowcount
+    # fetch all results and close cursor
     rows = cursor.fetchall()
-    ### print "Rows: {!r}\nrows content: {!r}\n".format(cursor.rowcount, rows)
     cursor.close()
     # parse rows to data list
     DBdata =[] # list for data dictionary from db
@@ -255,41 +259,47 @@ def processFoundFile(MQbody):
     ### print '\n [+] newbornMQdata:\n {!r}'.format(newbornMQdata)
     ### print '\n [-] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
     # update/insert/delete queries here:
+    # NEWBORN HERE:
     for newbornRecord in newbornMQdata:
         cursor = conn.cursor()
-        updateSql = '''
-        INSERT INTO `{0!s}`.`media` 
+        # TODO: compute WTF-factor
+        ### 
+        print ' [^] updateSql'
+        # define update SQL query
+        updateSql = u'''
+        INSERT INTO `test`.`media` # TODO: table name? 
             (`path`, `name`, `type`, `size`, `mtime`) 
         VALUES 
-            ({1!r}, {2!r}, 'File', {3!s}, {4!s}) 
+            (%s, %s, 'File', %s, %s) 
         ON DUPLICATE KEY UPDATE 
             `size` = VALUES(`size`), 
             `mtime` = VALUES(`mtime`),
             `updated` = NOW();
-        '''
-        updateSql = updateSql.format(cfgMySQLdb, # table 0,
-                                     msgFolderContext, # path 1
-                                     newbornRecord['name'], # name 2,
-                                     newbornRecord['size'], # size 3,
-                                     newbornRecord['mtime']) # mtime 4, 
-        ### print updateSql
-        print ' [^] updateSql'
-        cursor.execute(updateSql)
+        ''' # TODO: WTF-factor in SQL
+        # fill up and execute query
+        cursor.execute(updateSql, (#cfgMySQLdb, # table 0,
+                                   msgFolderContext, # path 1
+                                   newbornRecord['name'], # name 2,
+                                   newbornRecord['size'], # size 3,
+                                   newbornRecord['mtime'] # mtime 4
+                                   )) 
         cursor.close()
-    # delete queries here:
+    # OBSOLETE HERE:
     for obsoleteRecord in obsoleteDBdata:
         cursor = conn.cursor()
-        deleteSql = '''
-        DELETE FROM `{0!s}`.`media` 
-        WHERE (`media`.`name` = '{1!s}') 
-            AND (`media`.`path` = {2!r}); # TODO: backslashes?
-        '''
-        deleteSql = deleteSql.format(cfgMySQLdb, # table, 
-                                     obsoleteRecord['name'], # name, 
-                                     msgFolderContext) # path
-        ### print deleteSql
+        ### 
         print ' [-] deleteSql'
-        cursor.execute(deleteSql)
+        # define delete SQL query
+        deleteSql = u'''
+        DELETE FROM `test`.`media` # TODO: table name?
+        WHERE (`media`.`name` = %s) 
+            AND (`media`.`path` = %s);
+        ''' 
+        # fill up and execute query
+        cursor.execute(deleteSql, (#cfgMySQLdb, # table,
+                                   obsoleteRecord['name'], # name, 
+                                   msgFolderContext # path
+                                   ))
         cursor.close()
     # close last cursor, commit and disconnect from server
     conn.commit()
@@ -312,5 +322,5 @@ if __name__ == '__main__':
         channel.start_consuming() # start In consuming
         pass
     else:
-        ### log unsuccess connection
+        ### TODO: log/process unsuccess connection
         pass
