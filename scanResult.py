@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.9b
+@version: 0.0.9
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,7 +10,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    - other processors
+    - count and insert/update frames in sequences
     - check connection
     - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
@@ -21,7 +21,8 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
-    0.0.8 +fix processNoSubfolder, processFoldelGone, processNoFile, processFoundFile, 
+    0.0.8 +fix processNoSubfolder, processFoldelGone, 
+        processNoFile, processFoundFile, 
         processNoSequence, processFoundSequence
     0.0.6 +prosess noSubfolder, fix folderGone 
     0.0.5 +process folderGone in DB 
@@ -188,14 +189,51 @@ def processFoundSequence(MQbody):
     ### print '\n [-] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
     # update/insert/delete queries here:
     # NEWBORN HERE:
+    for newbornRecord in newbornMQdata:
+        cursor = conn.cursor()
+        # TODO: compute WTF-factor
+        ### 
+        print ' [^] updateSql'
+        # define update SQL query
+        updateSql = u'''
+        INSERT INTO `test`.`media` # TODO: table name? 
+            (`path`, `name`, `type`, `size`, `mtime`) 
+        VALUES 
+            (%s, %s, 'Sequence', %s, %s) 
+        ON DUPLICATE KEY UPDATE 
+            `size` = VALUES(`size`), 
+            `mtime` = VALUES(`mtime`),
+            `updated` = NOW();
+        ''' # TODO: WTF-factor in SQL
+        # fill up and execute query
+        cursor.execute(updateSql, (#cfgMySQLdb, # table 0,
+                                   msgFolderContext, # path 1
+                                   newbornRecord['name'], # name 2,
+                                   newbornRecord['size'], # size 3,
+                                   newbornRecord['mtime'] # mtime 4
+                                   )) 
+        cursor.close()
+    # OBSOLETE HERE:
+    for obsoleteRecord in obsoleteDBdata:
+        cursor = conn.cursor()
+        ### 
+        print ' [-] deleteSql'
+        # define delete SQL query
+        deleteSql = u'''
+        DELETE FROM `test`.`media` # TODO: table name?
+        WHERE (`media`.`name` = %s) 
+            AND (`media`.`path` = %s);
+        ''' 
+        # fill up and execute query
+        cursor.execute(deleteSql, (#cfgMySQLdb, # table,
+                                   obsoleteRecord['name'], # name, 
+                                   msgFolderContext # path
+                                   ))
+        cursor.close()
+    # close last cursor, commit and disconnect from server
+    conn.commit()
+    conn.close()
     
-    
-    ###
-    print "MQdata", MQdata
-    print "DBdata", DBdata
-    
-    pass
-
 def processNoSequence(MQbody):
     ###
     print " [:] Processing noSequence message..."
