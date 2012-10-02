@@ -52,7 +52,7 @@ cfgRabbitOutQueue = 'scanResult_queue' # queue with scan results
 cfgRabbitOutRoutingKey = 'scanResult_queue'
 
 # sleep time (sec) before re-request new task from queue
-cfgRequestSleepTime = 0.5 
+cfgRequestSleepTime = 1.0 
 
 # define console encoding
 # TODO: test on other systems
