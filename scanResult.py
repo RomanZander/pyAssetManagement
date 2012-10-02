@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.8
+@version: 0.0.9a
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -11,7 +11,8 @@
 # ---------------------------------------------------------------------------------------------
 """
     - other processors
-    check connection
+    - check connection
+    - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
     ...process unsuccess connection to In MQ channel
     ...process unsuccess connection to Out MQ channel
@@ -20,8 +21,8 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
-    0.0.8 +fix processNoSubfolder, processFoldelGone, processNoFile,
-        processFoundFile,
+    0.0.8 +fix processNoSubfolder, processFoldelGone, processNoFile, processFoundFile, 
+        processNoSequence, processFoundSequence
     0.0.6 +prosess noSubfolder, fix folderGone 
     0.0.5 +process folderGone in DB 
     0.0.4 +process foundFile in DB 
@@ -74,7 +75,6 @@ def connectMySQLdb():
                                cfgMySQLdb,
                                charset='utf8'
                                )
-        
     except MySQLdb.Error, e:
         ### TODO: log connection error
         ### TODO: reconnect tryout?
@@ -112,13 +112,13 @@ def dispatchIn(MQbody): # process inbound message
         
     elif MQbody['msgMessage'] == cfgFOUNDSEQUENCE:
         # call message processor for sequences
-        ###
-        print ' [#] processFoundSequence(MQbody)'
+        processFoundSequence(MQbody)
+        ### print ' [#] processFoundSequence(MQbody)'
         
     elif MQbody['msgMessage'] == cfgNOSEQUENCE:
         # call message processor for obsolete sequences
-        ###
-        print ' [#] processNoSequence(MQbody)'
+        processNoSequence(MQbody)
+        ### print ' [#] processNoSequence(MQbody)'
     
     elif MQbody['msgMessage'] == cfgFOUNDSUBFOLDER:
         # call message processor for subfolders
@@ -135,9 +135,82 @@ def dispatchIn(MQbody): # process inbound message
     ###
     print " [x] Done\n"
     
+def processFoundSequence(MQbody):
+    ###
+    print " [:] Processing foundSequence message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    # expand payload data from MQ message body
+    MQdata = [] # sequences list
+    for item in MQbody['msgPayload']:
+        # construct compound sequence name
+        itemName = u"{!s}[{!s}-{!s}]{!s}".format(item['namePrefix'],
+                                         item['nameIndexStart'],
+                                         item['nameIndexFinish'],
+                                         item['nameExtention'])
+        # fill up sequences list element
+        MQdata.append({'name': itemName,
+                       'size': item['size'],
+                       'mtime': item['mtime']
+                       })
+    # Open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create select SQL query
+    selectSql = u'''
+    SELECT `name`, `size`, `mtime` 
+    FROM `test`.`media` # TODO: table name?
+    WHERE  (`type` = 'Sequence') AND (`path` = %s);
+    ''' 
+    # fill up and execute SQL query
+    cursor.execute(selectSql, (msgFolderContext, ))
+    ### 
+    print ' [?] selectSql:', cursor.rowcount
+    # fetch all results and close cursor
+    rows = cursor.fetchall()
+    cursor.close()
+    # parse rows to data list
+    DBdata =[] # list for data dictionary from db
+    for row in rows:
+        DBdata.append({'name': row[0],
+                       'size': row[1],
+                       'mtime': int(row[2]) # convert to integer
+                       })
+    # newborn/obsolete logic here:
+    
+    ###
+    print "MQdata", MQdata
+    print "DBdata", DBdata
+    
+    pass
+
+def processNoSequence(MQbody):
+    ###
+    print " [:] Processing noSequence message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    # Open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create delete SQL query
+    deleteSql = u'''
+    DELETE FROM `test`.`media` # TODO: table name?
+    WHERE 
+        (`media`.`path` = %s) AND
+        (`media`.`type` = 'Sequence'); 
+    '''
+    # fill up and execute SQL query
+    cursor.execute(deleteSql, (#cfgMySQLdb, # TODO: table, 
+                               MySQLdb.escape_string(msgFolderContext) # path
+                               ))
+    ### 
+    print ' [-] deleteSql:', cursor.rowcount
+    # close last cursor, commit and disconnect from server
+    cursor.close()
+    conn.commit()
+    conn.close()
+    
 def processFoundSubfolder(MQbody):
     ###
-    print " [#] Processing foundSubfolder message..."
+    print " [#] Processing foundSubfolder message...\n ? - not been in this queue?"
     
 def processNoSubfolder(MQbody):
     ###
