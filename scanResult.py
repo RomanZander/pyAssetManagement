@@ -10,8 +10,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    unicode all
-    ...SQL|data comparing logic
+    - other processors
     check connection
     ...process unsuccess connection to RabbitMQ
     ...process unsuccess connection to In MQ channel
