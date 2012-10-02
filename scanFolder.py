@@ -2,7 +2,7 @@
 '''
 @summary: AssetManagement scanFolder
 @since: 2012.08.26
-@version: 0.0.9b
+@version: 0.0.10
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -10,16 +10,14 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    fix empty arg (= None)...
-    fix "' etc symbols in path/name
-    fix unicode
-    
     ...unite pika.log and logging
 """
 # ---------------------------------------------------------------------------------------------
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.10 +message about empty FOLDERPATH argument
+    0.0.9d +command-line arg, listdir and filenames unicoded 
     0.0.9b +OutMQ/InMQ, allow empty FOLDERPATH for queue-only mode 
     0.0.8 +mtime is integer only
     0.0.7 +folder context to message 
@@ -39,6 +37,10 @@ import time
 import pika
 import cPickle
 
+# tuples with media file extentions (lower-case!)
+cfgFileMediaExt = '.mov', '.avi', '.mp4'
+cfgSequenceMediaExt = '.dpx', '.tif', '.tiff', '.j2c', '.jpg', '.png'
+
 # config for RabbitMQ
 cfgRabbitAppID = 'scanFolder' # script identificator
 cfgRabbitHost = 'rabbitmq' # add record to hosts on local dev
@@ -48,12 +50,16 @@ cfgRabbitInRoutingKey = 'scanFolder_queue'
 cfgRabbitOutExchange = ''
 cfgRabbitOutQueue = 'scanResult_queue' # queue with scan results
 cfgRabbitOutRoutingKey = 'scanResult_queue'
+
 # sleep time (sec) before re-request new task from queue
 cfgRequestSleepTime = 0.5 
 
-# tuples with media file extentions (lower-case!)
-cfgFileMediaExt = '.mov', '.avi', '.mp4'
-cfgSequenceMediaExt = '.dpx', '.tif', '.tiff', '.j2c', '.jpg', '.png'
+# define console encoding
+# TODO: test on other systems
+if os.name == 'nt':
+    cfgConsoleEnc = 'cp1251' # for arg taked from console under Window
+if os.name == 'posix':
+    cfgConsoleEnc = 'utf8' # for console under etc...
 
 # status messages
 cfgFOLDERGONE = 'folderGone'
@@ -68,7 +74,7 @@ cfgNOSEQUENCE = 'noSequence'
 cfgRePattern = '^(.*\D)?(\d+)(\.[^\.]+)$' # modified '^(.*\D)?(\d+)?(\.[^\.]+)$'
 cfgReCompiled = re.compile(cfgRePattern, re.I) 
 
-cfgScanRoot = '' # scanning root folder
+cfgScanRoot = u'' # scanning root folder, unicode
 cfgLoglevel = '' # logging level
 cfgLogfile = '' # logging file name
 
@@ -121,8 +127,8 @@ def parseArgs(): # parse command line arguments
     
     # re-set global vars
     if args.scanRoot: 
-        # real path reconstruction
-        cfgScanRoot = os.path.realpath(args.scanRoot) 
+        # real path reconstruction, unicoded if from command line arg
+        cfgScanRoot = os.path.realpath(unicode(args.scanRoot, cfgConsoleEnc)) 
     cfgLoglevel = args.logLevel
     cfgLogfile = args.logFile
     pass
@@ -470,7 +476,10 @@ if __name__ == '__main__':
     configLogging() # logging setup 
     # pika.log.setup(pika.log.INFO) # set pika log level
     # logging output
-    logging.info('cfgScanRoot: %r\n', cfgScanRoot) 
+    if cfgScanRoot:
+        logging.info('cfgScanRoot: %r\n', cfgScanRoot)
+    else:
+        logging.info('Command-line argument FOLDERPATH is not set\n')  
     
     # do start task if set
     if cfgScanRoot:
