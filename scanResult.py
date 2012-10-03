@@ -11,7 +11,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    - count and insert/update frames in sequences
+    - 
     - check connection
     - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
@@ -22,6 +22,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.9 +count and insert/update frames in sequences
     0.0.8 +fix processNoSubfolder, processFoldelGone, 
         processNoFile, processFoundFile, 
         processNoSequence, processFoundSequence
@@ -149,17 +150,20 @@ def processFoundSequence(MQbody):
                                          item['nameIndexStart'],
                                          item['nameIndexFinish'],
                                          item['nameExtention'])
+        # count sequence frames
+        itemFrames = int(item['nameIndexFinish']) - int(item['nameIndexStart']) + 1 
         # fill up sequences list element
         MQdata.append({'name': itemName,
                        'size': item['size'],
-                       'mtime': item['mtime']
+                       'mtime': item['mtime'],
+                       'frames': itemFrames
                        })
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
     # create select SQL query
     selectSql = u'''
-    SELECT `name`, `size`, `mtime` 
+    SELECT `name`, `size`, `mtime`, `frames` 
     FROM `test`.`media` # TODO: table name?
     WHERE  (`type` = 'Sequence') AND (`path` = %s);
     ''' 
@@ -175,7 +179,8 @@ def processFoundSequence(MQbody):
     for row in rows:
         DBdata.append({'name': row[0],
                        'size': row[1],
-                       'mtime': int(row[2]) # convert to integer
+                       'mtime': int(row[2]), # convert to integer
+                       'frames': int(row[3]) # convert to integer
                        })
     # newborn/obsolete logic here:
     # filter MQdata from full duplicates with DBdata 
@@ -198,20 +203,21 @@ def processFoundSequence(MQbody):
         # define update SQL query
         updateSql = u'''
         INSERT INTO `test`.`media` # TODO: table name? 
-            (`path`, `name`, `type`, `size`, `mtime`) 
+            (`path`, `name`, `type`, `size`, `mtime`, `frames`) 
         VALUES 
-            (%s, %s, 'Sequence', %s, %s) 
+            (%s, %s, 'Sequence', %s, %s, %s) 
         ON DUPLICATE KEY UPDATE 
             `size` = VALUES(`size`), 
             `mtime` = VALUES(`mtime`),
             `updated` = NOW();
         ''' # TODO: WTF-factor in SQL
         # fill up and execute query
-        cursor.execute(updateSql, (#cfgMySQLdb, # table 0,
-                                   msgFolderContext, # path 1
-                                   newbornRecord['name'], # name 2,
-                                   newbornRecord['size'], # size 3,
-                                   newbornRecord['mtime'] # mtime 4
+        cursor.execute(updateSql, (#cfgMySQLdb, # table,
+                                   msgFolderContext, # path
+                                   newbornRecord['name'], # name,
+                                   newbornRecord['size'], # size,
+                                   newbornRecord['mtime'], # mtime,
+                                   newbornRecord['frames'] # frames
                                    )) 
         cursor.close()
     # OBSOLETE HERE:
