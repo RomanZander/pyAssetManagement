@@ -39,7 +39,7 @@ import pika
 import cPickle
 
 # tuples with media file extentions (lower-case!)
-cfgFileMediaExt = '.mov', '.avi', '.mp4'
+cfgFileMediaExt = '.mov', '.avi', '.mp4', '.wav'
 cfgSequenceMediaExt = '.dpx', '.tif', '.tiff', '.j2c', '.jpg', '.png'
 
 # config for RabbitMQ
