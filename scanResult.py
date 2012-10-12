@@ -11,7 +11,6 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    - pymysql instead MySQLdb
     - check connection
     - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
