@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/local/bin/python
 # -*- coding: utf-8 -*- 
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.9
+@version: 0.0.10
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -11,7 +11,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    - 
+    - pymysql instead MySQLdb
     - check connection
     - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
@@ -22,6 +22,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.10 pymysql instead MySQLdb
     0.0.9 +count and insert/update frames in sequences
     0.0.8 +fix processNoSubfolder, processFoldelGone, 
         processNoFile, processFoundFile, 
@@ -40,7 +41,9 @@ import logging
 import time
 import pika
 import cPickle
-import MySQLdb
+import pymysql
+# pymysql.install_as_MySQLdb()
+#import MySQLdb
 
 # config for RabbitMQ
 cfgRabbitAppID = 'scanResult' # script identificator
@@ -72,13 +75,16 @@ pika.log.setup(pika.log.INFO) #pika.log.setup(pika.log.ERROR)
 def connectMySQLdb():
     # Open database connection
     try:
-        connection = MySQLdb.connect(cfgMySQLhost, 
+        # connection = MySQLdb.connect(cfgMySQLhost,
+        connection = pymysql.connect(cfgMySQLhost,
                                cfgMySQLuser, 
                                cfgMySQLpasswd,
                                cfgMySQLdb,
+                               use_unicode=True,
                                charset='utf8'
                                )
-    except MySQLdb.Error, e:
+    #except MySQLdb.Error, e:
+    except pymysql.Error, e:
         ### TODO: log connection error
         ### TODO: reconnect tryout?
         print "Error %d: %s" % (e.args[0], e.args[1])
