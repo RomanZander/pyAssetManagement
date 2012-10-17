@@ -171,12 +171,11 @@ def processFoundSequence(MQbody):
     # create select SQL query
     selectSql = u'''
     SELECT `name`, `size`, `mtime`, `frames` 
-    FROM %s # TODO: table name?
+    FROM ''' + cfgMySQLtable + ''' # TODO: table name?
     WHERE  (`type` = 'Sequence') AND (`path` = %s);
     ''' 
     # fill up and execute SQL query
-    cursor.execute(selectSql, (cfgMySQLtable, 
-                               msgFolderContext
+    cursor.execute(selectSql, (msgFolderContext,
                                ))
     ### 
     print ' [?] selectSql:', cursor.rowcount
@@ -211,7 +210,7 @@ def processFoundSequence(MQbody):
         print ' [^] updateSql'
         # define update SQL query
         updateSql = u'''
-        INSERT INTO %s # TODO: table name? 
+        INSERT INTO ''' + cfgMySQLtable + ''' # TODO: table name? 
             (`path`, `name`, `type`, `size`, `mtime`, `frames`) 
         VALUES 
             (%s, %s, 'Sequence', %s, %s, %s) 
@@ -221,8 +220,7 @@ def processFoundSequence(MQbody):
             `updated` = NOW();
         ''' # TODO: WTF-factor in SQL
         # fill up and execute query
-        cursor.execute(updateSql, (cfgMySQLtable, # table,
-                                   msgFolderContext, # path
+        cursor.execute(updateSql, (msgFolderContext, # path
                                    newbornRecord['name'], # name,
                                    newbornRecord['size'], # size,
                                    newbornRecord['mtime'], # mtime,
@@ -236,13 +234,12 @@ def processFoundSequence(MQbody):
         print ' [-] deleteSql'
         # define delete SQL query
         deleteSql = u'''
-        DELETE FROM %s # TODO: table name?
+        DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
         WHERE (`name` = %s) 
             AND (`path` = %s);
         ''' 
         # fill up and execute query
-        cursor.execute(deleteSql, (cfgMySQLtable, # table,
-                                   obsoleteRecord['name'], # name, 
+        cursor.execute(deleteSql, (obsoleteRecord['name'], # name, 
                                    msgFolderContext # path
                                    ))
         cursor.close()
@@ -259,14 +256,13 @@ def processNoSequence(MQbody):
     cursor = conn.cursor()
     # create delete SQL query
     deleteSql = u'''
-    DELETE FROM %s # TODO: table name?
+    DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
     WHERE 
         (`path` = %s) AND
         (`type` = 'Sequence'); 
     '''
     # fill up and execute SQL query
-    cursor.execute(deleteSql, (cfgMySQLtable, # TODO: table, 
-                               msgFolderContext # path
+    cursor.execute(deleteSql, (msgFolderContext, # path
                                ))
     ### 
     print ' [-] deleteSql:', cursor.rowcount
@@ -290,13 +286,12 @@ def processNoSubfolder(MQbody):
     cursor = conn.cursor()
     # create delete SQL query
     deleteSql = u'''
-    DELETE FROM %s # TODO: table name?
+    DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
     WHERE 
         `path` LIKE %s;    
     ''' # subfolders only, i.e. '\path\to' vs '\path\to\%'
     # fill up and execute query
-    cursor.execute(deleteSql, (cfgMySQLtable, # TODO: table,
-                               subfoldersMask # subfolder mask
+    cursor.execute(deleteSql, (subfoldersMask, # subfolder mask
                                ))
     print " [-] deleteSql:", cursor.rowcount
     # close last cursor, commit and disconnect from server
@@ -315,14 +310,13 @@ def processFoldelGone(MQbody):
     cursor = conn.cursor()
     # create delete SQL query
     deleteSql = u'''
-    DELETE FROM %s # TODO: table name?
+    DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
     WHERE 
         (`path` = %s) OR
         (`path` LIKE %s);
     ''' # folders and subfolders, i.e. '\\path\\to' or '\\\\path\\\\to\\\\%'
     # fill up and execute SQL query
-    cursor.execute(deleteSql, (cfgMySQLtable, # TODO: table,
-                               msgFolderContext, # path
+    cursor.execute(deleteSql, (msgFolderContext, # path
                                subfoldersMask # subfolder mask
                                ))
     ### 
@@ -341,14 +335,13 @@ def processNoFile(MQbody):
     cursor = conn.cursor()
     # create delete SQL query
     deleteSql = u'''
-    DELETE FROM %s # TODO: table name?
+    DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
     WHERE 
         (`path` = %s) AND
         (`type` = 'File'); 
     '''
     # fill up and execute SQL query
-    cursor.execute(deleteSql, (cfgMySQLtable, # TODO: table, 
-                               msgFolderContext # path
+    cursor.execute(deleteSql, (msgFolderContext, # path
                                ))
     ### 
     print ' [-] deleteSql:', cursor.rowcount
@@ -369,12 +362,11 @@ def processFoundFile(MQbody):
     # create select SQL query
     selectSql = u'''
     SELECT `name`, `size`, `mtime` 
-    FROM %s # TODO: table name?
+    FROM ''' + cfgMySQLtable + ''' # TODO: table name?
     WHERE  (`type` = 'File') AND (`path` = %s);
     ''' 
     # fill up and execute SQL query
-    cursor.execute(selectSql, (cfgMySQLtable, # TODO: table, 
-                               msgFolderContext # path
+    cursor.execute(selectSql, (msgFolderContext, # path
                                ))
     ### 
     print ' [?] selectSql:', cursor.rowcount
@@ -408,7 +400,7 @@ def processFoundFile(MQbody):
         print ' [^] updateSql'
         # define update SQL query
         updateSql = u'''
-        INSERT INTO %s # TODO: table name? 
+        INSERT INTO ''' + cfgMySQLtable + ''' # TODO: table name? 
             (`path`, `name`, `type`, `size`, `mtime`) 
         VALUES 
             (%s, %s, 'File', %s, %s) 
@@ -418,8 +410,7 @@ def processFoundFile(MQbody):
             `updated` = NOW();
         ''' # TODO: WTF-factor in SQL
         # fill up and execute query
-        cursor.execute(updateSql, (cfgMySQLtable, # table 0,
-                                   msgFolderContext, # path 1
+        cursor.execute(updateSql, (msgFolderContext, # path 1
                                    newbornRecord['name'], # name 2,
                                    newbornRecord['size'], # size 3,
                                    newbornRecord['mtime'] # mtime 4
@@ -432,13 +423,12 @@ def processFoundFile(MQbody):
         print ' [-] deleteSql'
         # define delete SQL query
         deleteSql = u'''
-        DELETE FROM %s # TODO: table name?
+        DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
         WHERE (`name` = %s) 
             AND (`path` = %s);
         ''' 
         # fill up and execute query
-        cursor.execute(deleteSql, (cfgMySQLtable, # table,
-                                   obsoleteRecord['name'], # name, 
+        cursor.execute(deleteSql, (obsoleteRecord['name'], # name, 
                                    msgFolderContext # path
                                    ))
         cursor.close()
