@@ -3,7 +3,7 @@
 '''
 @summary: AssetManagement scanFolder
 @since: 2012.08.26
-@version: 0.0.10
+@version: 0.0.11
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -391,6 +391,8 @@ def processInTask(scanRoot = None):
         varSubDirList, varFileList = sortOutCollected(varRawDirListInfo)
         # push SUBFOLDERS info message to In MQ, if any
         if len(varSubDirList) > 0:
+            # push FOUNDSUBFOLDER info message to Out MQ
+            sendOutMessageToQM(cfgFOUNDSUBFOLDER,  varSubDirList) # subfolders list
             # (reroute task to self)
             sendInMessageToQM(cfgFOUNDSUBFOLDER, varSubDirList) # subfolders list
         else: # if empty
