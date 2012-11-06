@@ -454,7 +454,6 @@ def requestTasksFromInQueue():
             if data['msgMessage'] == cfgFOUNDSUBFOLDER:
                 logging.info(' [.] : %s', data['msgMessage'])
                 logging.info(' [.] : %r', data['msgPayload'])
-                logging.info(' [.] : %r', data['msgPayload'])
                 for inTask in data['msgPayload']:
                     # real path reconstruction
                     newTaskRoot =  data['msgFolderContext'] + os.sep + inTask['name']
