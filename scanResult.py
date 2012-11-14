@@ -3,7 +3,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.11
+@version: 0.0.12
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -11,6 +11,7 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
+    - subfolders processing
     - check connection
     - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
@@ -273,13 +274,58 @@ def processNoSequence(MQbody):
     
 def processFoundSubfolder(MQbody):
     ###
-    print " [#] Processing foundSubfolder message...\n ? - not been in this queue?"
+    print " [:] Processing foundSubfolder message..."
+    msgFolderContext = MQbody['msgFolderContext']
+    # create subfolder mask for SQL LIKE 
+    subfoldersMask = (msgFolderContext + os.sep + '%').replace('\\','\\\\')
+    # expand payload from MQ message body
+    MQdata = MQbody['msgPayload'] # subfolders list
+    
+    ### 
+    print '\n [###] MQdata:\n {!r}'.format(MQdata)
+    print '\n [###] subfoldersMask:\n {!r}'.format(subfoldersMask)
+    ### 
+    
+    # open database connection and prepare a cursor object
+    conn = connectMySQLdb() 
+    cursor = conn.cursor()
+    # create select SQL query
+    selectSql = u'''
+    SELECT  DISTINCT `path` 
+    FROM ''' + cfgMySQLtable + ''' # TODO: table name?
+    WHERE  `path` LIKE %s;
+    ''' 
+    # fill up and execute SQL query
+    cursor.execute(selectSql, (subfoldersMask, # path
+                               ))
+    ### 
+    print ' [?] selectSql:', cursor.rowcount
+    # fetch all results and close cursor
+    rows = cursor.fetchall()
+    cursor.close()
+    # parse rows to data list
+    DBdata =[] # list for data dictionary from db
+    
+    ### 
+    print '\n [###] DBdata:\n {!r}'.format(DBdata)
+    
+    
+    ### get old subfolders list
+    ### compute obsolete list
+    ### prepate delete obsolete sql
+    ### execute delete obsolete sql
+    
+    print " [-###] deleteSql:" ###, cursor.rowcount
+    # close last cursor, commit and disconnect from server
+    cursor.close()
+    conn.commit()
+    conn.close()
     
 def processNoSubfolder(MQbody):
     ###
     print " [:] Processing noSubfolder message..."
     msgFolderContext = MQbody['msgFolderContext']
-    #create subfolder mask for SQL LIKE 
+    # create subfolder mask for SQL LIKE 
     subfoldersMask = (msgFolderContext + os.sep + '%').replace('\\','\\\\')
     # Open database connection and prepare a cursor object
     conn = connectMySQLdb() 
