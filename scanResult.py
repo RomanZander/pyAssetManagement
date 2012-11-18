@@ -3,7 +3,7 @@
 '''
 @summary: AssetManagement scanResult
 @since: 2012.09.19
-@version: 0.0.12
+@version: 0.0.13
 @author: Roman Zander
 @see:  https://github.com/RomanZander/pyAssetManagement
 '''
@@ -22,6 +22,7 @@
 # CHANGELOG
 # ---------------------------------------------------------------------------------------------
 '''
+    0.0.13 +processFoundSubfolder
     0.0.11 db/table in cfg
     0.0.10 pymysql instead MySQLdb
     0.0.9 +count and insert/update frames in sequences
@@ -243,8 +244,9 @@ def processFoundSequence(MQbody):
         cursor.execute(deleteSql, (obsoleteRecord['name'], # name, 
                                    msgFolderContext # path
                                    ))
+        # close last cursor
         cursor.close()
-    # close last cursor, commit and disconnect from server
+    # commit and disconnect from server
     conn.commit()
     conn.close()
     
@@ -279,13 +281,12 @@ def processFoundSubfolder(MQbody):
     # create subfolder mask for SQL LIKE 
     subfoldersMask = (msgFolderContext + os.sep + '%').replace('\\','\\\\')
     # expand payload from MQ message body
-    MQdata = MQbody['msgPayload'] # subfolders list
-    
-    ### 
-    print '\n [###] MQdata:\n {!r}'.format(MQdata)
-    print '\n [###] subfoldersMask:\n {!r}'.format(subfoldersMask)
-    ### 
-    
+    MQdata = [] # sequences list
+    # construct found path from subfolders list
+    for item in MQbody['msgPayload']:
+        itemPath = msgFolderContext + os.sep + item['name'] 
+        MQdata.append(itemPath)
+    # get old subfolders list:
     # open database connection and prepare a cursor object
     conn = connectMySQLdb() 
     cursor = conn.cursor()
@@ -304,19 +305,46 @@ def processFoundSubfolder(MQbody):
     rows = cursor.fetchall()
     cursor.close()
     # parse rows to data list
-    DBdata =[] # list for data dictionary from db
-    
-    ### 
-    print '\n [###] DBdata:\n {!r}'.format(DBdata)
-    
-    
-    ### get old subfolders list
-    ### compute obsolete list
-    ### prepate delete obsolete sql
-    ### execute delete obsolete sql
-    
-    print " [-###] deleteSql:" ###, cursor.rowcount
-    # close last cursor, commit and disconnect from server
+    DBdata =[] # list for data from db
+    for row in rows:
+        DBdata.append(row[0]) 
+    # newborn/obsolete logic here:
+    # define comparison logic
+    def pathBelongsTo(pathToCheck, pathList):
+        belonging = False # intinal
+        for pathItem in pathList:
+            if pathToCheck == pathItem:
+                # path is equal to current list item
+                belonging = True
+                break
+            if pathToCheck.startswith(pathItem + os.sep):
+                # path includes current list item 
+                belonging = True
+                break 
+        return belonging
+    # collect obsolete records from DBdata with MQdata
+    obsoleteDBdata = [dbRecord for dbRecord in DBdata if not
+                      pathBelongsTo(dbRecord, MQdata)] # belonging check
+    ### print '\n [###] subfoldersMask:\n {!r}'.format(subfoldersMask)
+    ### print '\n [###] MQdata:\n {!r}'.format(MQdata)
+    ### print '\n [###] DBdata:\n {!r}'.format(DBdata)
+    ### print '\n [###] obsoleteDBdata:\n {!r}'.format(obsoleteDBdata)
+    # OBSOLETE HERE:    
+    for obsoleteRecord in obsoleteDBdata:
+        cursor = conn.cursor()
+        # define delete SQL query
+        deleteSql = u'''
+        DELETE FROM ''' + cfgMySQLtable + ''' # TODO: table name?
+        WHERE (`path` = %s) 
+        ''' 
+        # fill up and execute query
+        cursor.execute(deleteSql, (obsoleteRecord, # path 
+                                   ))
+        ###
+        print " [-] deleteSql:", cursor.rowcount
+        # close last cursor
+        cursor.close()
+    # commit and disconnect from server
     cursor.close()
     conn.commit()
     conn.close()
