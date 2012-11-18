@@ -11,7 +11,6 @@
 # TODO
 # ---------------------------------------------------------------------------------------------
 """
-    - subfolders processing
     - check connection
     - unite logging/pika log
     ...process unsuccess connection to RabbitMQ
